@@ -9,8 +9,8 @@ PFLAGS += -I../../../tos/lib/nosleep/
 
 #enable protocol
 #PFLAGS += -I../../../tos/lib/ftsp_tinyos/
-PFLAGS += -I../../../tos/lib/ftsp_minimum_variance/
-#PFLAGS += -I../../../tos/lib/ftsp_tinyos_modified/regression/
+#PFLAGS += -I../../../tos/lib/ftsp_minimum_variance/
+PFLAGS += -I../../../tos/lib/ftsp_discontinuity/
 
 #enable cc2420x
 PFLAGS += -I../../../tos/platforms/micaz/

@@ -61,9 +61,6 @@ implementation{
   uint32_t  local   = 0;
   uint32_t  clock   = 0;
   float     skew    = 0;
-  uint32_t  meanX   = 0;
-  uint32_t  meanY   = 0;
-  uint8_t   synced  = 0;
    
   task void sendTask(){
     
@@ -90,11 +87,7 @@ implementation{
 
     msgptr->nodeid = TOS_NODE_ID;
     msgptr->clock  = clock;
-    msgptr->local  = local;
     msgptr->skew   = *((uint32_t *)&skew);
-    msgptr->meanX  = meanX;
-    msgptr->meanY  = meanY;
-    msgptr->synced = synced;
       
     post sendTask();
   }
@@ -123,11 +116,8 @@ implementation{
       if(msgptr->nodeid == 0){
         if (call PacketTimeStamp.isValid(msg)){
           clock         = call PacketTimeStamp.timestamp(msg);
-          local         = clock;
-          synced        = call GlobalTime.local2Global(&clock);
-          skew          = call TimeSyncInfo.getSkew();
-          meanX         = call TimeSyncInfo.getSyncPoint();
-          meanY         = call TimeSyncInfo.getOffset();
+          call GlobalTime.local2Global(&clock);
+          skew          = call TimeSyncInfo.getSkew();          
           call Timer0.startOneShot(50*TOS_NODE_ID + 20);
         }
       }
