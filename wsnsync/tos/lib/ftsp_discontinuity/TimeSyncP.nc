@@ -244,6 +244,7 @@ implementation
         int8_t i, freeItem = -1, oldestItem = 0;
         uint32_t age, oldestTime = 0;
         int32_t timeError;
+        uint32_t local1,local2;        
 
         // clear table if the received entry's been inconsistent for some time
         timeError = msg->localTime;
@@ -287,6 +288,20 @@ implementation
 
         table[freeItem].localTime = msg->localTime;
         table[freeItem].timeOffset = msg->globalTime - msg->localTime;
+        
+        /* check if clocks run back after calculation */
+        local2 = local1 = msg->localTime;
+        
+        call GlobalTime.local2Global(&local1);
+        calculateConversion();
+        call GlobalTime.local2Global(&local2);
+        timeError = local1 - local2;
+        
+        if((is_synced() == SUCCESS) && timeError > 0){
+        
+        	int32_t offset = (int32_t)((float)timeError/skew);
+        	atomic localAverage += offset;
+        }                
     }
 
     void task processMsg()
@@ -311,7 +326,6 @@ implementation
             heartBeats = 0;
 
         addNewEntry(msg);
-        calculateConversion();
         signal TimeSyncNotify.msg_received();
 
     exit:
