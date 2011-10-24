@@ -1,6 +1,6 @@
 COMPONENT=TSyncAppC
 
-PFLAGS += -I../Application/CRFtspApp/
+PFLAGS += -I../Application/FtspApp/
 CFLAGS += -DPERIOD=20000
 #CFLAGS += -DTOSH_DATA_LENGTH=52
 
