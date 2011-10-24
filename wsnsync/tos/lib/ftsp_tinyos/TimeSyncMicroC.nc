@@ -23,7 +23,6 @@ implementation
 #endif
 
   components new TimeSyncP(TMicro) as TimeSyncP;
-  //components new TimeSyncTheilP(TMicro) as TimeSyncP;
 
   GlobalTime      =   TimeSyncP;
   StdControl      =   TimeSyncP;
@@ -50,11 +49,6 @@ implementation
   
   components MessageCounterC;
   TimeSyncP.MessageCounter -> MessageCounterC;
-  
-/*  components SerialActiveMessageC as SAM;
-  TimeSyncP.SerialSend -> SAM.AMSend[AM_SERIAL_MSG_T];
-  TimeSyncP.SerialControl ->  SAM;
-  TimeSyncP.SerialPacket ->  SAM;*/
   
 #if defined(TIMESYNC_LEDS)
   components LedsC;
