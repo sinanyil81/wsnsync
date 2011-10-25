@@ -1,5 +1,4 @@
 #include "TimeSyncMsg.h"
-#include "SerialMsg.h"
 
 configuration TimeSyncMicroC
 {
