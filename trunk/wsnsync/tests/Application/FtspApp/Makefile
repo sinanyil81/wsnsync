@@ -10,7 +10,8 @@ PFLAGS += -I../../../tos/lib/nosleep/
 #enable protocol
 #PFLAGS += -I../../../tos/lib/ftsp_tinyos/
 #PFLAGS += -I../../../tos/lib/ftsp_minimum_variance/
-PFLAGS += -I../../../tos/lib/ftsp_discontinuity/
+#PFLAGS += -I../../../tos/lib/ftsp_discontinuity/
+PFLAGS += -I../../../tos/lib/ftsp_average/
 
 #enable cc2420x
 PFLAGS += -I../../../tos/platforms/micaz/
