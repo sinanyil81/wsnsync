@@ -96,11 +96,6 @@ implementation
 
     TableItem   table[MAX_ENTRIES];
     uint8_t tableEntries;
-    
-    /* slope table to store least-squares slopes to decide on a consistent slope */
-    float slopeTable[MAX_ENTRIES];
-	int slopeIndex = 0;
-	int numSlopes = 0;
 
     enum {
         STATE_IDLE = 0x00,
@@ -233,35 +228,6 @@ implementation
             numEntries = tableEntries;
         }
     }
-    
-    /* Adjusts the inconsistent slope of the least-squares line  */
-    void adjustSlope(){
-    	int i;
-    	
-    	/* check if we have enough number of entries to calculate least-squares */
-		if(is_synced()){
-        	float slopeAvg = 0.0;
-        	
-        	slopeTable[slopeIndex] = skew;
-        	        	
-        	if (numSlopes < MAX_ENTRIES)
-        		numSlopes++;
-        	
-        	/* calculate the average of slopes */
-        	for(i= 0; i < numSlopes; i++){
-        		slopeAvg += slopeTable[i];
-        	}        	      
-        	
-        	slopeAvg = slopeAvg/(float)numSlopes;
-        	
-        	/* store our current slope at the slope table */
-        	slopeTable[slopeIndex] = slopeAvg;
-        	slopeIndex = (slopeIndex + 1) % MAX_ENTRIES;
-        	
-        	/* set our new slope */
-        	atomic skew = slopeAvg;
-        }        
-    }
 
     void clearTable()
     {
@@ -270,9 +236,6 @@ implementation
             table[i].state = ENTRY_EMPTY;
 
         atomic numEntries = 0;
-        
-        slopeIndex = 0;
-        numSlopes = 0;
     }
 
     uint8_t numErrors=0;
@@ -281,6 +244,7 @@ implementation
         int8_t i, freeItem = -1, oldestItem = 0;
         uint32_t age, oldestTime = 0;
         int32_t timeError;     
+        uint32_t local1,local2;
 
         // clear table if the received entry's been inconsistent for some time
         timeError = msg->localTime;
@@ -324,9 +288,20 @@ implementation
 
         table[freeItem].localTime = msg->localTime;
         table[freeItem].timeOffset = msg->globalTime - msg->localTime;
-                       
+        
+        local1 = local2 = msg->localTime;
+        
+        call GlobalTime.local2Global(&local1);               
         calculateConversion();
-        adjustSlope();                        
+        call GlobalTime.local2Global(&local2);
+        timeError = local1 - local2;
+        
+        /* clocks being set back */
+        if((is_synced() == SUCCESS) && timeError > 0){
+        
+        	int32_t offset = (int32_t)((float)timeError/skew);
+        	atomic localAverage += offset;
+        }                
     }
 
     void task processMsg()
