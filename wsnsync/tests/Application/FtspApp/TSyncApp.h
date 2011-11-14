@@ -43,6 +43,14 @@ typedef nx_struct TSyncAppMsg_t {
   nx_uint16_t nodeid;
   nx_uint32_t clock;
   nx_uint32_t skew;
+  
+  /* with average slope*/
+  nx_uint32_t _clock;
+  nx_uint32_t _skew;
+  
+  /* without set back */
+  nx_uint32_t __clock;
+  
 } TSyncAppMsg;
 
 #endif /* TSYNC_APP_H */
