@@ -282,9 +282,6 @@ implementation
         	
         	atomic slopeAvg = average;        	
         }
-        else{
-        	atomic slopeAvg = skew;
-        }
     }
 
     uint8_t numErrors=0;
