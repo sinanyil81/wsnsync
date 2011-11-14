@@ -174,7 +174,7 @@ implementation
     
     async command error_t GlobalTime.__local2Global(uint32_t *time)
     {
-        *time += offsetAverage + jumpOffset + (int32_t)(slopeAvg * ((int32_t)(*time - localAverage) + (int32_t)((float)jumpOffset/slopeAvg)));
+        *time += offsetAverage + jumpOffset + (int32_t)(slopeAvg * ( (int32_t)(*time - localAverage) + (int32_t)((float)jumpOffset/slopeAvg) ) );
         return is_synced();
     }
 
