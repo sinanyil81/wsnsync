@@ -262,11 +262,11 @@ implementation
         atomic slopeAvg = 0.0f;
         slopeIndex = 0;
     	numSlopes = 0;
-    	jumpOffset = 0;
+    	atomic jumpOffset = 0;
     }
     
     void calculateAverageSlope(){
-		if(is_synced()){
+		if(is_synced() == SUCCESS){
 			float average = 0.0;
 			int i;
 			
@@ -277,8 +277,10 @@ implementation
         		numSlopes++;
    
         	for(i= 0; i < numSlopes; i++){
-        		average += slopeTable[i]/(float)numSlopes;
+        		average += slopeTable[i];
         	}
+        	
+        	average /= (float)numSlopes;
         	
         	atomic slopeAvg = average;        	
         }
@@ -371,8 +373,8 @@ implementation
         call GlobalTime._local2Global(&current);
         /* prevent clock being set back */
         timeError = previous - current;
-        if(timeError > 0){
-        	jumpOffset = timeError/2;
+        if(timeError > 0 && is_synced() == SUCCESS){
+        	atomic jumpOffset = timeError/2;
         } 
         
         signal TimeSyncNotify.msg_received();
