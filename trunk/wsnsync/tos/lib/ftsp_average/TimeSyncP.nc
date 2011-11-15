@@ -430,11 +430,9 @@ implementation
         call GlobalTime.doubleAverageLocal2Global(&current);
         /* prevent clock being set back */
         timeError = previous - current;
-        if(timeError > 0 && is_synced() == SUCCESS){
-        	atomic jumpOffset = timeError/2;
-        }
-        
-        
+        if(timeError !=0 && is_synced() == SUCCESS){
+        	atomic jumpOffset += timeError/2;
+        }               
         
         signal TimeSyncNotify.msg_received();
 
