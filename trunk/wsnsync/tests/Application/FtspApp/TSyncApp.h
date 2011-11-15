@@ -45,11 +45,17 @@ typedef nx_struct TSyncAppMsg_t {
   nx_uint32_t skew;
   
   /* with average slope*/
-  nx_uint32_t _clock;
-  nx_uint32_t _skew;
+  nx_uint32_t a_clock;
+  nx_uint32_t a_skew;
+  
+  nx_uint32_t m_clock;
+  nx_uint32_t m_skew;
   
   /* without set back */
-  nx_uint32_t __clock;
+  nx_uint32_t da_clock;
+  nx_uint32_t da_skew;
+  
+  nx_uint32_t dda_clock;
   
 } TSyncAppMsg;
 
