@@ -126,10 +126,16 @@ implementation
     uint8_t slopeIndex;
     uint8_t numSlopes;
     
+    /* average of the least-squares slopes*/
     float slopeAvg = 0.0f;
+    float slopeAvgAvg = 0.0f;
     
-    /* extra offset to preventing logical clocks being set back */ 
-    int jumpOffset = 0;    
+    /* median of the least-squares slopes*/
+    float slopeMedian = 0.0f;
+    float sortedSlopeTable[MAX_ENTRIES];
+ 
+	/* extra offset to preventing logical clocks being set back */ 
+    int jumpOffset = 0;   
 
     message_t processedMsgBuffer;
     message_t* processedMsg;
@@ -159,24 +165,35 @@ implementation
         return FAIL;
     }
 
-
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
         *time += offsetAverage + (int32_t)(skew * (int32_t)(*time - localAverage));
         return is_synced();
     }
     
-    async command error_t GlobalTime._local2Global(uint32_t *time)
+    async command error_t GlobalTime.averageLocal2Global(uint32_t *time)
     {
         *time += offsetAverage + (int32_t)(slopeAvg * (int32_t)(*time - localAverage));
         return is_synced();
     }
     
-    async command error_t GlobalTime.__local2Global(uint32_t *time)
+    async command error_t GlobalTime.doubleAverageLocal2Global(uint32_t *time)
     {
-        *time += offsetAverage + jumpOffset + (int32_t)(slopeAvg * ( (int32_t)(*time - localAverage) + (int32_t)((float)jumpOffset/slopeAvg) ) );
+        *time += offsetAverage + (int32_t)(slopeAvgAvg * (int32_t)(*time - localAverage));
         return is_synced();
     }
+    
+    async command error_t GlobalTime.discontiniutyLocal2Global(uint32_t *time)
+    {
+        *time += offsetAverage + jumpOffset + (int32_t)(slopeAvgAvg * ( (int32_t)(*time - localAverage) + (int32_t)((float)jumpOffset/slopeAvgAvg) ) );
+        return is_synced();
+    }
+    
+	async command error_t GlobalTime.medianLocal2Global(uint32_t *time)
+    {
+        *time += offsetAverage + (int32_t)(slopeMedian * (int32_t)(*time - localAverage));
+        return is_synced();
+    }   
 
     async command error_t GlobalTime.global2Local(uint32_t *time)
     {
@@ -260,31 +277,68 @@ implementation
         atomic numEntries = 0;
         
         atomic slopeAvg = 0.0f;
+        atomic slopeAvgAvg = 0.0f;
+        atomic slopeMedian = 0.0f;
+        atomic jumpOffset = 0;
+        
         slopeIndex = 0;
     	numSlopes = 0;
-    	atomic jumpOffset = 0;
+    }
+    
+    void storeLeastSquaresSlope(){
+    	    	
+    	/* add new slope to the table */    	    	       	
+        slopeTable[slopeIndex] = skew;
+		slopeIndex = (slopeIndex + 1) % MAX_ENTRIES;
+        if (numSlopes<MAX_ENTRIES)
+        	numSlopes++;
     }
     
     void calculateAverageSlope(){
 		if(is_synced() == SUCCESS){
 			float average = 0.0;
-			int i;
-			
-         	/* add new slope to the table */       	
-        	slopeTable[slopeIndex] = skew;
-			slopeIndex = (slopeIndex + 1) % MAX_ENTRIES;
-        	if (numSlopes<MAX_ENTRIES)
-        		numSlopes++;
+			int i;        	
    
         	for(i= 0; i < numSlopes; i++){
         		average += slopeTable[i];
         	}
         	
-        	average /= (float)numSlopes;
+        	average /= (float)numSlopes;        	
+        	atomic slopeAvg = average;
         	
-        	atomic slopeAvg = average;        	
+        	if(numSlopes >1)
+        		atomic slopeAvgAvg = (slopeAvgAvg + average)/2.0;
+        	else
+        		atomic slopeAvgAvg = average;        	
         }
     }
+    
+    int floatcomp(const void* elem1, const void* elem2)
+	{
+    	if(*(const float*)elem1 < *(const float*)elem2)
+        	return -1;
+    	return *(const float*)elem1 > *(const float*)elem2;
+	}
+    
+    void calculateMedianSlope(){
+		if(is_synced() == SUCCESS){
+			float median = 0.0;
+   
+   			/* copy and sort array */
+   			memcpy(sortedSlopeTable,slopeTable,sizeof(float)*numSlopes);
+   			qsort(sortedSlopeTable,numSlopes, sizeof(float), floatcomp);        	
+        	
+        	/* calculate median slope */
+        	if((numSlopes % 2) != 0){
+        		median = sortedSlopeTable[numSlopes/2];
+        	}
+        	else{
+        		median = (sortedSlopeTable[numSlopes/2] + sortedSlopeTable[numSlopes/2-1])/2.0f;
+        	}
+        	   	
+        	atomic slopeMedian = median;        	
+        }
+    }    
 
     uint8_t numErrors=0;
     void addNewEntry(TimeSyncMsg *msg)
@@ -363,19 +417,24 @@ implementation
 
         addNewEntry(msg);
         calculateConversion();
+        storeLeastSquaresSlope();
         
         previous = current = msg->localTime;
-        call GlobalTime._local2Global(&previous);
+        call GlobalTime.doubleAverageLocal2Global(&previous);
         
         /* calculates the average slope of the least-squares lines */
         calculateAverageSlope();
+        /* calculates the median slope of the least-squares lines */
+        calculateMedianSlope();
                 
-        call GlobalTime._local2Global(&current);
+        call GlobalTime.doubleAverageLocal2Global(&current);
         /* prevent clock being set back */
         timeError = previous - current;
         if(timeError > 0 && is_synced() == SUCCESS){
         	atomic jumpOffset = timeError/2;
-        } 
+        }
+        
+        
         
         signal TimeSyncNotify.msg_received();
 
@@ -575,7 +634,10 @@ implementation
     }
 
     async command float     TimeSyncInfo.getSkew() { return skew; }
-    async command float     TimeSyncInfo._getSkew() { return slopeAvg; }
+    async command float     TimeSyncInfo.getAverageSkew() { return slopeAvg; }
+    async command float     TimeSyncInfo.getDoubleAverageSkew() { return slopeAvgAvg; }
+    async command float     TimeSyncInfo.getMedianSkew() { return slopeMedian; }
+    
     async command uint32_t  TimeSyncInfo.getOffset() { return offsetAverage; }
     async command uint32_t  TimeSyncInfo.getSyncPoint() { return localAverage; }
     async command uint16_t  TimeSyncInfo.getRootID() { return outgoingMsg->rootID; }
