@@ -62,10 +62,16 @@ implementation{
   uint32_t  clock   = 0;
   float     skew    = 0;
   
-  uint32_t  _clock   = 0;
-  float     _skew    = 0;
+  uint32_t  a_clock   = 0;
+  float     a_skew    = 0;
   
-  uint32_t  __clock   = 0; 
+  uint32_t  da_clock   = 0;
+  float     da_skew    = 0;    
+  
+  uint32_t  m_clock   = 0;
+  float     m_skew    = 0;  
+  
+  uint32_t  dda_clock   = 0;   
    
   task void sendTask(){
     
@@ -94,10 +100,16 @@ implementation{
     msgptr->clock  = clock;
     msgptr->skew   = *((uint32_t *)&skew);
     
-    msgptr->_clock  = _clock;
-    msgptr->_skew   = *((uint32_t *)&_skew);
+    msgptr->a_clock  = a_clock;
+    msgptr->a_skew   = *((uint32_t *)&a_skew);
     
-    msgptr->__clock  = __clock;
+    msgptr->da_clock  = a_clock;
+    msgptr->da_skew   = *((uint32_t *)&da_skew);       
+    
+	msgptr->m_clock  = m_clock;
+    msgptr->m_skew   = *((uint32_t *)&m_skew);
+    
+    msgptr->dda_clock  = dda_clock;       
       
     post sendTask();
   }
@@ -126,13 +138,23 @@ implementation{
       if(msgptr->nodeid == 0){
         if (call PacketTimeStamp.isValid(msg)){
           clock         = call PacketTimeStamp.timestamp(msg);
-          __clock = _clock = clock;
+          a_clock = clock;
+          m_clock = clock;
+          da_clock = clock;
+          dda_clock = clock;
           
           call GlobalTime.local2Global(&clock);
-          call GlobalTime._local2Global(&_clock);
-          call GlobalTime.__local2Global(&__clock);
+          
+          call GlobalTime.averageLocal2Global(&a_clock);
+          call GlobalTime.doubleAverageLocal2Global(&da_clock);
+          call GlobalTime.discontiniutyLocal2Global(&dda_clock);         
+		  call GlobalTime.medianLocal2Global(&m_clock);
+         
+          
           skew = call TimeSyncInfo.getSkew();
-          _skew = call TimeSyncInfo._getSkew();
+          a_skew = call TimeSyncInfo.getAverageSkew();
+          m_skew = call TimeSyncInfo.getMedianSkew();
+          da_skew = call TimeSyncInfo.getDoubleAverageSkew();
                     
           call Timer0.startOneShot(50*TOS_NODE_ID + 20);
         }
