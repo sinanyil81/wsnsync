@@ -47,8 +47,12 @@ interface TimeSyncInfo
 	 */
 	async command float getSkew();
 	/* average slope */
-	async command float _getSkew();
-
+	async command float getAverageSkew();
+	/* average slope */
+	async command float getDoubleAverageSkew();
+	/* median slope */
+	async command float getMedianSkew();
+	
 	/**
 	 * Returns the local time of the last synchronization point. This 
 	 * value is close to the current local time and updated when a new
