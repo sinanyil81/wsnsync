@@ -65,9 +65,14 @@ interface GlobalTime<precision_tag>
 	 */
 	async command error_t local2Global(uint32_t *time);
 	/* with average slope */
-	async command error_t _local2Global(uint32_t *time);
+	async command error_t averageLocal2Global(uint32_t *time);
+	/* with double average slope */
+	async command error_t doubleAverageLocal2Global(uint32_t *time);
+	/* with median slope */
+	async command error_t medianLocal2Global(uint32_t *time);
 	/* with preventing clocks being set back */
-	async command error_t __local2Global(uint32_t *time);
+	async command error_t discontiniutyLocal2Global(uint32_t *time);
+	
 
 	/**
 	 * Converts the global time given in <code>time</code> into the
