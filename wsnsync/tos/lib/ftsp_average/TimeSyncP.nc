@@ -420,18 +420,19 @@ implementation
         storeLeastSquaresSlope();
         
         previous = current = msg->localTime;
-        call GlobalTime.doubleAverageLocal2Global(&previous);
+        call GlobalTime.discontiniutyLocal2Global(&previous);
         
         /* calculates the average slope of the least-squares lines */
         calculateAverageSlope();
         /* calculates the median slope of the least-squares lines */
         calculateMedianSlope();
                 
-        call GlobalTime.doubleAverageLocal2Global(&current);
+        call GlobalTime.discontiniutyLocal2Global(&current);
         /* prevent clock being set back */
         timeError = previous - current;
         if(timeError !=0 && is_synced() == SUCCESS){
-        	atomic jumpOffset += timeError/2;
+        	int offset = jumpOffset + timeError/2;
+        	atomic jumpOffset = offset;
         }               
         
         signal TimeSyncNotify.msg_received();
