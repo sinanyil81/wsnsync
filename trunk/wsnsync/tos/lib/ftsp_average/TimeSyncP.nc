@@ -128,7 +128,7 @@ implementation
     
     /* average of the least-squares slopes*/
     float slopeAvg = 0.0f;
-    float slopeAvgAvg = 0.0f;
+    float recentSlopeAvg = 0.0f;
     
     /* median of the least-squares slopes*/
     float sortedSlopeTable[MAX_ENTRIES];
@@ -179,16 +179,16 @@ implementation
     
     async command error_t GlobalTime.doubleAverageLocal2Global(uint32_t *time)
     {
-        *time += offsetAverage + (int32_t)(slopeAvgAvg * (int32_t)(*time - localAverage));
+        *time += offsetAverage + (int32_t)(recentSlopeAvg * (int32_t)(*time - localAverage));
         return is_synced();
     }
     
     async command error_t GlobalTime.discontiniutyLocal2Global(uint32_t *time)
     {
-        uint32_t d_localAverage = localAverage - (int32_t)(((float)jumpOffset)/slopeAvgAvg);
+        uint32_t d_localAverage = localAverage - (int32_t)(((float)jumpOffset)/recentSlopeAvg);
         int32_t d_offsetAverage = offsetAverage + jumpOffset;
 
-        *time += d_offsetAverage + (int32_t)(slopeAvgAvg *(int32_t)(*time - d_localAverage));
+        *time += d_offsetAverage + (int32_t)(recentSlopeAvg *(int32_t)(*time - d_localAverage));
         return is_synced();
     }
     
@@ -280,7 +280,7 @@ implementation
         atomic numEntries = 0;
         
         atomic slopeAvg = 0.0f;
-        atomic slopeAvgAvg = 0.0f;
+        atomic recentSlopeAvg = 0.0f;
         atomic slopeMedian = 0.0f;
         atomic jumpOffset = 0;
         
@@ -311,9 +311,9 @@ implementation
         	atomic slopeAvg = average;
         	
         	if( numSlopes > 1 )
-        		atomic slopeAvgAvg = (slopeAvgAvg + average)/2.0;
+        		atomic recentSlopeAvg = (skew + average)/2.0;
         	else
-        		atomic slopeAvgAvg = average;        	
+        		atomic recentSlopeAvg = average;        	
         }
     }
     
@@ -647,7 +647,7 @@ implementation
 
     async command float     TimeSyncInfo.getSkew() { return skew; }
     async command float     TimeSyncInfo.getAverageSkew() { return slopeAvg; }
-    async command float     TimeSyncInfo.getDoubleAverageSkew() { return slopeAvgAvg; }
+    async command float     TimeSyncInfo.getDoubleAverageSkew() { return recentSlopeAvg; }
     async command float     TimeSyncInfo.getMedianSkew() { return slopeMedian; }
     
     async command uint32_t  TimeSyncInfo.getOffset() { return offsetAverage; }
