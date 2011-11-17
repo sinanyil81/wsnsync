@@ -131,11 +131,11 @@ implementation
     float slopeAvgAvg = 0.0f;
     
     /* median of the least-squares slopes*/
-    float slopeMedian = 0.0f;
     float sortedSlopeTable[MAX_ENTRIES];
+    float slopeMedian = 0.0f;
  
 	/* extra offset to preventing logical clocks being set back */ 
-    int jumpOffset = 0;   
+    int32_t jumpOffset = 0;
 
     message_t processedMsgBuffer;
     message_t* processedMsg;
@@ -185,7 +185,10 @@ implementation
     
     async command error_t GlobalTime.discontiniutyLocal2Global(uint32_t *time)
     {
-        *time += offsetAverage + jumpOffset + (int32_t)(slopeAvgAvg * ( (int32_t)(*time - localAverage) + (int32_t)((float)jumpOffset/slopeAvgAvg) ) );
+        uint32_t d_localAverage = localAverage - (int32_t)(((float)jumpOffset)/slopeAvgAvg);
+        int32_t d_offsetAverage = offsetAverage + jumpOffset;
+
+        *time += d_offsetAverage + (int32_t)(slopeAvgAvg *(int32_t)(*time - d_localAverage));
         return is_synced();
     }
     
@@ -286,12 +289,13 @@ implementation
     }
     
     void storeLeastSquaresSlope(){
-    	    	
-    	/* add new slope to the table */    	    	       	
-        slopeTable[slopeIndex] = skew;
-		slopeIndex = (slopeIndex + 1) % MAX_ENTRIES;
-        if (numSlopes<MAX_ENTRIES)
-        	numSlopes++;
+        if(is_synced() == SUCCESS){    	
+            /* add new slope to the table */    	    	       	
+            slopeTable[slopeIndex] = skew;
+            slopeIndex = (slopeIndex + 1) % MAX_ENTRIES;
+            if (numSlopes<MAX_ENTRIES)
+                numSlopes++;
+        }
     }
     
     void calculateAverageSlope(){
@@ -306,7 +310,7 @@ implementation
         	average /= (float)numSlopes;        	
         	atomic slopeAvg = average;
         	
-        	if(numSlopes >1)
+        	if( numSlopes > 1 )
         		atomic slopeAvgAvg = (slopeAvgAvg + average)/2.0;
         	else
         		atomic slopeAvgAvg = average;        	
@@ -325,7 +329,7 @@ implementation
 			float median = 0.0;
    
    			/* copy and sort array */
-   			memcpy(sortedSlopeTable,slopeTable,sizeof(float)*numSlopes);
+            memcpy(sortedSlopeTable,slopeTable,sizeof(float)*MAX_ENTRIES);
    			qsort(sortedSlopeTable,numSlopes, sizeof(float), floatcomp);        	
         	
         	/* calculate median slope */
@@ -395,6 +399,8 @@ implementation
     {
     	int32_t timeError;
     	uint32_t previous,current;
+        error_t checkDiscontiniuty = FAIL;
+        
         TimeSyncMsg* msg = (TimeSyncMsg*)(call Send.getPayload(processedMsg, sizeof(TimeSyncMsg)));
 
         if( msg->rootID < outgoingMsg->rootID){ // &&
@@ -415,23 +421,30 @@ implementation
         if( outgoingMsg->rootID < TOS_NODE_ID )
             heartBeats = 0;
 
+        /* for time discontiniuty prevention */
+        checkDiscontiniuty = is_synced();
+        previous = msg->localTime;
+        call GlobalTime.discontiniutyLocal2Global(&previous);
+        
         addNewEntry(msg);
         calculateConversion();
+
+        /* store least-squares slope */
         storeLeastSquaresSlope();
-        
-        previous = current = msg->localTime;
-        call GlobalTime.discontiniutyLocal2Global(&previous);
         
         /* calculates the average slope of the least-squares lines */
         calculateAverageSlope();
+        
         /* calculates the median slope of the least-squares lines */
         calculateMedianSlope();
-                
+
+        /* for time discontiniuty prevention */
+        current = msg->localTime;
+        atomic jumpOffset = 0;
         call GlobalTime.discontiniutyLocal2Global(&current);
-        /* prevent clock being set back */
         timeError = previous - current;
-        if(timeError !=0 && is_synced() == SUCCESS){
-        	int offset = jumpOffset + timeError/2;
+        if(( checkDiscontiniuty == SUCCESS) && (timeError !=0)){
+        	int32_t offset = timeError/2;
         	atomic jumpOffset = offset;
         }               
         
