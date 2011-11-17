@@ -103,7 +103,7 @@ implementation{
     msgptr->a_clock  = a_clock;
     msgptr->a_skew   = *((uint32_t *)&a_skew);
     
-    msgptr->da_clock  = a_clock;
+    msgptr->da_clock  = da_clock;
     msgptr->da_skew   = *((uint32_t *)&da_skew);       
     
 	msgptr->m_clock  = m_clock;
