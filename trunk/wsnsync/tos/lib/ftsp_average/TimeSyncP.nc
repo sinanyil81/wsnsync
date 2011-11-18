@@ -311,7 +311,7 @@ implementation
         	atomic slopeAvg = average;
         	
         	if( numSlopes > 1 )
-        		atomic recentSlopeAvg = (skew + average)/2.0;
+        		atomic recentSlopeAvg = (recentSlopeAvg + average)/2.0;
         	else
         		atomic recentSlopeAvg = average;        	
         }
@@ -443,7 +443,7 @@ implementation
         atomic jumpOffset = 0;
         call GlobalTime.discontiniutyLocal2Global(&current);
         timeError = previous - current;
-        if(( checkDiscontiniuty == SUCCESS) && (timeError !=0)){
+        if(( checkDiscontiniuty == SUCCESS) && (timeError > 0)){
         	int32_t offset = timeError/2;
         	atomic jumpOffset = offset;
         }               
