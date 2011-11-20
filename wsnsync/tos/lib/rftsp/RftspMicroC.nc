@@ -1,4 +1,4 @@
-#include "TimeSyncMsg.h"
+#include "RftspMsg.h"
 
 configuration RftspMicroC
 {
@@ -33,8 +33,8 @@ implementation
 
   components TimeSyncMessageC as ActiveMessageC;
   TimeSyncP.RadioControl    ->  ActiveMessageC;
-  TimeSyncP.Send            ->  ActiveMessageC.TimeSyncAMSendRadio[TIMESYNC_AM_FTSP];
-  TimeSyncP.Receive         ->  ActiveMessageC.Receive[TIMESYNC_AM_FTSP];
+  TimeSyncP.Send            ->  ActiveMessageC.TimeSyncAMSendRadio[TIMESYNC_AM_RFTSP];
+  TimeSyncP.Receive         ->  ActiveMessageC.Receive[TIMESYNC_AM_RFTSP];
   TimeSyncP.TimeSyncPacket  ->  ActiveMessageC;
 
   components LocalTimeMicroC;
