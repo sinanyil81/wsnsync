@@ -46,12 +46,9 @@ implementation
   components RandomC;
   TimeSyncP.Random -> RandomC;
 
-  components RateConsensusC;
-  TimeSyncP.RateConsensus -> RateConsensusC;
+  components NeighborhoodC;
+  TimeSyncP.Neighborhood -> NeighborhoodC;
 
-  components LogicalClockC;
-  TimeSyncP.LogicalClock -> LogicalClockC;
-  
 #if defined(TIMESYNC_LEDS)
   components LedsC;
 #else
