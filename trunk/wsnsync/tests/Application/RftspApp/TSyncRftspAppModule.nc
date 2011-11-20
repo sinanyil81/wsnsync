@@ -96,8 +96,8 @@ implementation{
 
     msgptr->nodeid = TOS_NODE_ID;
     
-    msgptr->rftsp_clock  = rftsp_clock;
-    msgptr->rftsp_skew   = *((uint32_t *)&rftsp_skew);
+    msgptr->clock  = rftsp_clock;
+    msgptr->skew   = *((uint32_t *)&rftsp_skew);
     
     msgptr->fcsa_clock  = fcsa_clock;
     msgptr->fcsa_skew   = *((uint32_t *)&fcsa_skew);
