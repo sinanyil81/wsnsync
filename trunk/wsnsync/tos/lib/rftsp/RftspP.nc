@@ -91,13 +91,13 @@ implementation
 
     async command error_t GlobalTime.global2Local(uint32_t *time)
     {
-    	*time = rootClock + (int32_t)(rootRate * (int32_t)(*time - lastUpdate));
+    	*time = rootClock + (int32_t)(*time - lastUpdate) + (int32_t)(rootRate * (int32_t)(*time - lastUpdate));
         return is_synced();
     }
 
     void task processMsg()
     {
-        float rate;
+    	float neighborRate = 0.0,receivedRate = 0.0,estimatedRate = 0.0f;
         error_t status;
         
         RftspMsg* msg = (RftspMsg*)(call Send.getPayload(processedMsg, sizeof(RftspMsg)));
@@ -110,26 +110,34 @@ implementation
             goto exit;           
         }
                                                          
-		if( msg->rootID < outgoingMsg->rootID){
+		if( msg->rootID < outgoingMsg->rootID){atomic rootRate = estimatedRate;
             outgoingMsg->rootID = msg->rootID;
             outgoingMsg->seqNum = msg->seqNum;
             
-            atomic rootClock = outgoingMsg->rootClock;
+            atomic rootClock = msg->rootClock;
             atomic lastUpdate = processedMsgEventTime;
             
-            if(call Neighbors.getRelativeRate(msg->nodeID,&rate) == SUCCESS){
-                atomic rootRate = rate;
+            if(call Neighbors.getRelativeRate(msg->nodeID,&neighborRate) == SUCCESS){
+	            uint32_t tmp = msg->rootRate;
+            	receivedRate = *((float *)&tmp);
+            	estimatedRate = (receivedRate  + 1.0)* (neighborRate + 1.0) - 1.0;
             }
+            
+            atomic rootRate = estimatedRate;
         }
         else if( outgoingMsg->rootID == msg->rootID && (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
             
-            atomic rootClock = outgoingMsg->rootClock;
+            atomic rootClock = msg->rootClock;
             atomic lastUpdate = processedMsgEventTime;
             
-            if(call Neighbors.getRelativeRate(msg->nodeID,&rate) == SUCCESS){
-            	atomic rootRate = rate;
+            if(call Neighbors.getRelativeRate(msg->nodeID,&neighborRate) == SUCCESS){
+            	uint32_t tmp = msg->rootRate;
+            	receivedRate = *((float *)&tmp);
+            	estimatedRate = (receivedRate  + 1.0)* (neighborRate + 1.0) - 1.0;
             }
+            
+            atomic rootRate = estimatedRate;
         }
  		
  		call Leds.led1Toggle();
