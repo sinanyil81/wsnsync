@@ -1,6 +1,6 @@
 #include "TimeSyncMsg.h"
 
-configuration RFtspMicroC
+configuration RftspMicroC
 {
   uses interface Boot;
   provides interface Init;
