@@ -176,7 +176,7 @@ implementation
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
 #endif
-         if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, TIMESYNCMSG_LEN, localTime ) != SUCCESS ){
+         if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, FCSAMSG_LEN, localTime ) != SUCCESS ){
             state &= ~STATE_SENDING;
             signal TimeSyncNotify.msg_sent();
         }
