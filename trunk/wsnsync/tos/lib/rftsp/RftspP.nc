@@ -1,4 +1,4 @@
-#include "TimeSyncMsg.h"
+#include "RftspMsg.h"
 
 generic module RftspP(typedef precision_tag)
 {
@@ -58,7 +58,7 @@ implementation
     message_t* processedMsg;    
 
     message_t outgoingMsgBuffer;
-    TimeSyncMsg* outgoingMsg;
+    RftspMsg* outgoingMsg;
 
     uint32_t processedMsgEventTime;
 
@@ -100,7 +100,7 @@ implementation
         float rate;
         error_t status;
         
-        TimeSyncMsg* msg = (TimeSyncMsg*)(call Send.getPayload(processedMsg, sizeof(TimeSyncMsg)));
+        RftspMsg* msg = (RftspMsg*)(call Send.getPayload(processedMsg, sizeof(RftspMsg)));
 
 //         call Neighborhood.updateNeighbors(call LocalTime.get());
         
@@ -142,7 +142,7 @@ implementation
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
     {
         /* TODO */
-        uint16_t incomingID = (uint8_t)((TimeSyncMsg*)payload)->nodeID;
+        uint16_t incomingID = (uint8_t)((RftspMsg*)payload)->nodeID;
         int16_t diff = (incomingID - TOS_NODE_ID);
         /* LINE topology */
         if( diff < -1 || diff > 1 )
@@ -185,7 +185,7 @@ implementation
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
 #endif
-         if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, TIMESYNCMSG_LEN, localTime ) != SUCCESS ){
+         if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, RFTSPMSG_LEN, localTime ) != SUCCESS ){
             state &= ~STATE_SENDING;
             signal TimeSyncNotify.msg_sent();
         }
@@ -218,7 +218,7 @@ implementation
 
     event void Timer.fired()
     {
-      if (mode == TS_TIMER_MODE) {
+      if (mode == RFTSP_TIMER_MODE) {
         timeSyncMsgSend();
       }
       else
@@ -226,7 +226,7 @@ implementation
     }
 
     command error_t TimeSyncMode.setMode(uint8_t mode_){
-        if (mode_ == TS_TIMER_MODE){
+        if (mode_ == RFTSP_TIMER_MODE){
             call Timer.startPeriodic((uint32_t)(896U+(call Random.rand16()&0xFF)) * BEACON_RATE);
         }
         else
@@ -241,7 +241,7 @@ implementation
     }
 
     command error_t TimeSyncMode.send(){
-        if (mode == TS_USER_MODE){
+        if (mode == RFTSP_USER_MODE){
             timeSyncMsgSend();
             return SUCCESS;
         }
@@ -252,7 +252,7 @@ implementation
     {   
         
         call Neighbors.reset();
-        atomic outgoingMsg = (TimeSyncMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(TimeSyncMsg));
+        atomic outgoingMsg = (RftspMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(RftspMsg));
 
 		outgoingMsg->rootID = TOS_NODE_ID;
         outgoingMsg->nodeID = TOS_NODE_ID;
@@ -272,7 +272,7 @@ implementation
 
     command error_t StdControl.start()
     {
-        call TimeSyncMode.setMode(TS_TIMER_MODE);
+        call TimeSyncMode.setMode(RFTSP_TIMER_MODE);
 
         return SUCCESS;
     }
