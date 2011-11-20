@@ -2,7 +2,7 @@ COMPONENT = TSyncFtspAppC
 
 CFLAGS += -DTIMESYNC_RATE=30
 CFLAGS += -DTIMESYNC_LEDS
-#CFLAGS += -DTOSH_DATA_LENGTH=96
+CFLAGS += -DTOSH_DATA_LENGTH=40
 
 PFLAGS += -I../../../tos/lib/messagecounter/
 PFLAGS += -I../../../tos/lib/nosleep/
