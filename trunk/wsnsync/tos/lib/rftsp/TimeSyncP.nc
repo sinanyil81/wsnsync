@@ -24,8 +24,7 @@ generic module TimeSyncP(typedef precision_tag)
         interface Leds;
         interface TimeSyncPacket<precision_tag,uint32_t>;
         interface LocalTime<precision_tag> as LocalTime;
-        interface RateConsensus;
-        interface LogicalClock;        
+        interface Neighborhood;      
 
 #ifdef LOW_POWER_LISTENING
         interface LowPowerListening;
@@ -48,7 +47,10 @@ implementation
         STATE_SENDING = 0x02,
         STATE_INIT = 0x04,
     };
-
+	
+	uint32_t rootClock = 0;
+	float rootRate = 0.0;
+	uint32_t lastUpdate = 0;	
 
     uint8_t state, mode;
 
@@ -83,15 +85,13 @@ implementation
 
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
-        call LogicalClock.getValue(time);
-
+        call GlobalTime.global2Local(time);
         return is_synced();
     }
 
     async command error_t GlobalTime.global2Local(uint32_t *time)
     {
-//         uint32_t approxLocalTime = *time - offsetAverage;
-//         *time = approxLocalTime - (int32_t)(skew * (int32_t)(approxLocalTime - localAverage));
+    	*time = rootClock + (int32_t)(rootRate * (int32_t)(*time - lastUpdate));
         return is_synced();
     }
 
@@ -103,30 +103,40 @@ implementation
         
         TimeSyncMsg* msg = (TimeSyncMsg*)(call Send.getPayload(processedMsg, sizeof(TimeSyncMsg)));
 
-//         call RateConsensus.updateNeighbors(call LocalTime.get());
-
-        mult = msg->multiplier;
-        status = call RateConsensus.storeNeighborInfo(msg->nodeID,
-                                                      *((float *)&mult),
-                                                      msg->localTime,
-                                                      processedMsgEventTime);
-
-        rate = call RateConsensus.getRate(call LogicalClock.getRate());
-        call LogicalClock.setRate(rate);
-
-        if( (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
-            outgoingMsg->seqNum = msg->seqNum;
-        }
-        else
-            goto exit;       
-
-        if(status == SUCCESS){
-            call LogicalClock.setValue(msg->globalTime,processedMsgEventTime);
-            call Leds.led1Toggle();
-        }
+//         call Neighborhood.updateNeighbors(call LocalTime.get());
         
+        status = call Neighborhood.storeNeighborInfo(msg->nodeID,
+                                                     msg->localTime,
+                                                     processedMsgEventTime);
+        if(status == FAIL){
+            goto exit;           
+        }
+                                                         
+		if( msg->rootID < outgoingMsg->rootID){
+            outgoingMsg->rootID = msg->rootID;
+            outgoingMsg->seqNum = msg->seqNum;
+            
+            rootClock = outgoingMsg->rootClock;
+            lastUpdate = processedMsgEventTime;
+            
+            if(call Neighborhood.getRelativeRate(msg->nodeID,&rate) == SUCCESS){
+                rootRate = rate;
+            }
+        }
+        else if( outgoingMsg->rootID == msg->rootID && (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
+            outgoingMsg->seqNum = msg->seqNum;
+            
+            rootClock = outgoingMsg->rootClock;
+            lastUpdate = processedMsgEventTime;
+            
+            if(call Neighborhood.getRelativeRate(msg->nodeID,&rate) == SUCCESS){
+            	rootRate = rate;
+            }
+        }
+ 		
+ 		call Leds.led1Toggle();
         signal TimeSyncNotify.msg_received();
-
+        
     exit:
         state &= ~STATE_PROCESSING;
     }
@@ -158,20 +168,21 @@ implementation
 
     task void sendMsg()
     {
-        uint32_t localTime, globalTime;
+        uint32_t localTime, rootTime;
         float multiplier;
 
-        globalTime = localTime = call GlobalTime.getLocalTime();
-        call GlobalTime.local2Global(&globalTime);
+        rootTime = localTime = call GlobalTime.getLocalTime();
+        call GlobalTime.local2Global(&rootTime);
 
-        if( ROOT_ID == TOS_NODE_ID ) {
-            call LogicalClock.setValue(globalTime,localTime);
+		/* update root time */
+        if( outgoingMsg->rootID == TOS_NODE_ID ) {
+            rootClock = rootTime;
+			lastUpdate = localTime;
         }
-
-        multiplier = call LogicalClock.getRate();
-        outgoingMsg->multiplier = *((uint32_t*)(&multiplier));
+        
+        outgoingMsg->rootRate = *((uint32_t*)(&rootRate));
         outgoingMsg->localTime = localTime;
-        outgoingMsg->globalTime = globalTime;
+        outgoingMsg->rootClock = rootTime;
         
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
@@ -189,13 +200,11 @@ implementation
 
         if(error == SUCCESS)
         {         
-            if( TOS_NODE_ID == ROOT_ID ){
+            if( TOS_NODE_ID == outgoingMsg->rootID ){
                 outgoingMsg->seqNum++;
                 call Leds.led2Toggle();
             }   
-        }
-
-        
+        }      
 
         state &= ~STATE_SENDING;
         signal TimeSyncNotify.msg_sent();
@@ -249,11 +258,9 @@ implementation
 
         atomic outgoingMsg = (TimeSyncMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(TimeSyncMsg));
 
+		outgoingMsg->rootID = TOS_NODE_ID;
         outgoingMsg->nodeID = TOS_NODE_ID;
         outgoingMsg->seqNum = 0;
-
-        if(TOS_NODE_ID == ROOT_ID)
-            call Leds.led0On();
 
         processedMsg = &processedMsgBuffer;
         state = STATE_INIT;

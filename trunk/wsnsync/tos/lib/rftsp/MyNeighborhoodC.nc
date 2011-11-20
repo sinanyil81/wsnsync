@@ -1,8 +1,8 @@
-module RateConsensusC
+module NeighborhoodC
 {
     provides
     {
-        interface RateConsensus;
+        interface Neighborhood;
     }
 }
 implementation
@@ -31,11 +31,10 @@ implementation
     typedef struct NeighborEntry{
         uint8_t state;                      // is entry full or empty ?
         uint8_t id;                         // ID of the neighbor
-        float multiplier;                   // latest rate multiplier received
 
-        TableItem   table[MAX_ENTRIES];     // stores the timestamp pairs in order to calculate
-                                            // the slope of the least-squares line
+        TableItem   table[MAX_ENTRIES];     // stores the timestamp pairs in order to calculate least-squares
         uint8_t tableEntries;               // number of the full entries
+        
         float skew;                         // the relative hardware rate calculated by performing least-squares regression
         uint32_t localAverage;              // least-squares average of x
         int32_t offsetAverage;              // least-squares average of y-x
@@ -176,7 +175,6 @@ implementation
 
     void clearNeighbor(uint8_t i){
         neighbors[i].state = ENTRY_EMPTY;
-        neighbors[i].multiplier = 0.0;
         neighbors[i].skew = 0.0;
         clearTable(neighbors[i].table,&neighbors[i].tableEntries);
     }
@@ -215,11 +213,11 @@ implementation
         return freeItem;
     }
 
-    command void RateConsensus.reset(){
+    command void Neighborhood.reset(){
         clearNeighbors();
     }
 
-    command void RateConsensus.updateNeighbors(uint32_t currentTime){
+    command void Neighborhood.updateNeighbors(uint32_t currentTime){
         int8_t i;
         uint32_t age;
 
@@ -232,7 +230,7 @@ implementation
         }
     }
 
-    command error_t RateConsensus.storeNeighborInfo(uint8_t neighborID,float multiplier, uint32_t neighborClock,uint32_t eventTime){
+    command error_t Neighborhood.storeNeighborInfo(uint8_t neighborID,uint32_t neighborClock,uint32_t eventTime){
 
         uint8_t found = 0;
         int8_t index = getNeighborSlot(neighborID);
@@ -250,8 +248,6 @@ implementation
                 neighbors[index].state = ENTRY_FULL;
                 neighbors[index].id = neighborID;
                 neighbors[index].timestamp = eventTime;
-                neighbors[index].multiplier = multiplier;
-
                 addNewEntry(neighbors[index].table,
                             &neighbors[index].tableEntries,
                             eventTime,
@@ -277,21 +273,17 @@ implementation
         return FAIL;        
     }
 
-    command float RateConsensus.getRate(float myRate){
-        float rateSum = myRate;
-        uint8_t i;
+    command error_t Neighborhood.getRelativeRate(uint16_t neighborID,float *rate){
+        int8_t index = getNeighborSlot(neighborID);
 
-        numNeighbors = 0;
-
-        for (i = 0; i < MAX_NEIGHBORS; i++) {
-            if(neighbors[i].state == ENTRY_FULL){
-                rateSum += neighbors[i].skew*neighbors[i].multiplier;
-                rateSum += neighbors[i].multiplier;
-                rateSum += neighbors[i].skew;
-                numNeighbors++;
-            }
+        if(index >= 0){
+            *rate = neighbors[index].skew;
+            
+            return SUCCESS;
         }
-
-        return rateSum/(float)(numNeighbors+1);
+        
+        rate = 0.0;
+        
+        return FAIL;
     }
 }
