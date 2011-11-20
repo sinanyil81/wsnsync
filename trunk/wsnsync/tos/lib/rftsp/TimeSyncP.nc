@@ -24,7 +24,7 @@ generic module TimeSyncP(typedef precision_tag)
         interface Leds;
         interface TimeSyncPacket<precision_tag,uint32_t>;
         interface LocalTime<precision_tag> as LocalTime;
-        interface Neighborhood;      
+        interface Neighbors;      
 
 #ifdef LOW_POWER_LISTENING
         interface LowPowerListening;
@@ -97,7 +97,6 @@ implementation
 
     void task processMsg()
     {
-        uint32_t mult;
         float rate;
         error_t status;
         
@@ -105,9 +104,8 @@ implementation
 
 //         call Neighborhood.updateNeighbors(call LocalTime.get());
         
-        status = call Neighborhood.storeNeighborInfo(msg->nodeID,
-                                                     msg->localTime,
-                                                     processedMsgEventTime);
+        status = call Neighbors.storeInfo(msg->nodeID,msg->localTime,processedMsgEventTime);
+        
         if(status == FAIL){
             goto exit;           
         }
@@ -116,21 +114,21 @@ implementation
             outgoingMsg->rootID = msg->rootID;
             outgoingMsg->seqNum = msg->seqNum;
             
-            rootClock = outgoingMsg->rootClock;
-            lastUpdate = processedMsgEventTime;
+            atomic rootClock = outgoingMsg->rootClock;
+            atomic lastUpdate = processedMsgEventTime;
             
-            if(call Neighborhood.getRelativeRate(msg->nodeID,&rate) == SUCCESS){
-                rootRate = rate;
+            if(call Neighbors.getRelativeRate(msg->nodeID,&rate) == SUCCESS){
+                atomic rootRate = rate;
             }
         }
         else if( outgoingMsg->rootID == msg->rootID && (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
             
-            rootClock = outgoingMsg->rootClock;
-            lastUpdate = processedMsgEventTime;
+            atomic rootClock = outgoingMsg->rootClock;
+            atomic lastUpdate = processedMsgEventTime;
             
-            if(call Neighborhood.getRelativeRate(msg->nodeID,&rate) == SUCCESS){
-            	rootRate = rate;
+            if(call Neighbors.getRelativeRate(msg->nodeID,&rate) == SUCCESS){
+            	atomic rootRate = rate;
             }
         }
  		
@@ -176,8 +174,8 @@ implementation
 
 		/* update root time */
         if( outgoingMsg->rootID == TOS_NODE_ID ) {
-            rootClock = rootTime;
-			lastUpdate = localTime;
+            atomic rootClock = rootTime;
+			atomic lastUpdate = localTime;
         }
         
         outgoingMsg->rootRate = *((uint32_t*)(&rootRate));
@@ -253,9 +251,7 @@ implementation
     command error_t Init.init()
     {   
         
-        call RateConsensus.reset();
-        call LogicalClock.start();        
-
+        call Neighbors.reset();
         atomic outgoingMsg = (TimeSyncMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(TimeSyncMsg));
 
 		outgoingMsg->rootID = TOS_NODE_ID;
@@ -287,8 +283,8 @@ implementation
         return SUCCESS;
     }
 
-    async command float     TimeSyncInfo.getSkew() { return call LogicalClock.getRate(); }
-    async command uint16_t  TimeSyncInfo.getRootID() { return ROOT_ID; }
+    async command float     TimeSyncInfo.getSkew() { return rootRate; }
+    async command uint16_t  TimeSyncInfo.getRootID() { return outgoingMsg->rootID;}
     async command uint8_t   TimeSyncInfo.getSeqNum() { return outgoingMsg->seqNum; }
 
     default event void TimeSyncNotify.msg_received(){}
