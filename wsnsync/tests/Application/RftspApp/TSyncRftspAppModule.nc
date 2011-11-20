@@ -46,20 +46,29 @@ generic module TSyncRftspAppModule(typedef precision_tag){
   uses interface PacketTimeStamp<precision_tag,uint32_t>;
 
   uses interface SplitControl as AMControl;
-  uses interface StdControl as TSyncControl;
-  uses interface TimeSyncInfo;
-  uses interface GlobalTime<TMicro>;
+  
+  uses interface StdControl as RftspControl;
+  uses interface TimeSyncInfo as RftspInfo;
+  uses interface GlobalTime<TMicro> as RftspTime;
+  
+  uses interface StdControl as FcsaControl;
+  uses interface TimeSyncInfo as FcsaInfo;
+  uses interface GlobalTime<TMicro> as FcsaTime;
+  
   uses interface Timer<TMilli> as Timer0;
   //uses interface MessageCounter;
-
 }
 implementation{
 
   message_t pktSend;
   bool busy = FALSE;
 
-  uint32_t  clock   = 0;
-  float     skew    = 0;
+  uint32_t  rftsp_clock   = 0;
+  float     rftsp_skew    = 0;
+  
+  uint32_t  fcsa_clock   = 0;
+  float     fcsa_skew    = 0;
+  
   uint8_t   synced  = 0;
    
   task void sendTask(){
@@ -86,8 +95,12 @@ implementation{
     }
 
     msgptr->nodeid = TOS_NODE_ID;
-    msgptr->clock  = clock;
-    msgptr->skew   = *((uint32_t *)&skew);
+    
+    msgptr->rftsp_clock  = rftsp_clock;
+    msgptr->rftsp_skew   = *((uint32_t *)&rftsp_skew);
+    
+    msgptr->fcsa_clock  = fcsa_clock;
+    msgptr->fcsa_skew   = *((uint32_t *)&fcsa_skew);
     msgptr->synced = synced;
       
     post sendTask();
@@ -116,9 +129,11 @@ implementation{
       // global  time.
       if(msgptr->nodeid == 0){
         if (call PacketTimeStamp.isValid(msg)){
-          clock         = call PacketTimeStamp.timestamp(msg);
-          synced        = call GlobalTime.local2Global(&clock);
-          skew          = call TimeSyncInfo.getSkew();
+          fcsa_clock = rftsp_clock = call PacketTimeStamp.timestamp(msg);
+          synced        = call RftspTime.local2Global(&rftsp_clock);
+          synced        = call FcsaTime.local2Global(&fcsa_clock);
+          rftsp_skew    = call RftspInfo.getSkew();
+          fcsa_skew     = call FcsaInfo.getSkew();
           call Timer0.startOneShot(50*TOS_NODE_ID + 20);
         }
       }
@@ -138,7 +153,8 @@ implementation{
   event void AMControl.startDone(error_t error){
 
     if (error == SUCCESS) {
-      call TSyncControl.start();
+      call RftspControl.start();
+      call FcsaControl.start();
       post nosleep();
     }
     else {

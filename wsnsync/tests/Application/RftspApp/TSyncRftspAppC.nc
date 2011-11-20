@@ -39,21 +39,27 @@ configuration TSyncRftspAppC{
 implementation{
   components MainC,LedsC,NoSleepC; 
   components ActiveMessageC as AM;
-
    
   components new TimerMilliC() as Timer0;
-  components new TimerMilliC() as Timer1;
    
-  components RftspMicroC as TSync;
+  components RftspMicroC as Rftsp;
+  components FcsaMicroC as Fcsa;
   components new TSyncRftspAppModule(TMicro) as App; 
   //components MessageCounterC;
   
-  MainC.SoftwareInit -> TSync;
+  MainC.SoftwareInit -> Rftsp;
+  MainC.SoftwareInit -> Fcsa;
 
-  TSync.Boot            -> MainC; 
-  App.GlobalTime        -> TSync;
-  App.TSyncControl      -> TSync;
-  App.TimeSyncInfo      -> TSync;
+  Rftsp.Boot            -> MainC; 
+  App.RftspTime        	-> Rftsp;
+  App.RftspControl      -> Rftsp;
+  App.RftspInfo      	-> Rftsp;
+  
+  Fcsa.Boot            	-> MainC; 
+  App.FcsaTime        	-> Fcsa;
+  App.FcsaControl      	-> Fcsa;
+  App.FcsaInfo      	-> Fcsa;
+  
   App.Leds              -> LedsC;
   App.AMControl         -> AM;
   App.AMSend            -> AM.AMSend[AM_TSYNCAPPMSG_T];
