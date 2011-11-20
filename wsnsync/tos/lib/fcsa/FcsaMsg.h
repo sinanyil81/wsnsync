@@ -15,7 +15,7 @@ typedef nx_struct FcsaMsg
 
 enum {
     TIMESYNC_AM_FCSA = 0x3D,
-    TIMESYNCMSG_LEN = sizeof(FcsaMsg),
+    FCSAMSG_LEN = sizeof(FcsaMsg),
     TS_TIMER_MODE = 0,      // see TimeSyncMode interface
     TS_USER_MODE = 1,       // see TimeSyncMode interface
 };
