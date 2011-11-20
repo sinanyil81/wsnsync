@@ -1,4 +1,4 @@
-#include "TimeSyncMsg.h"
+#include "FcsaMsg.h"
 
 configuration FcsaMicroC
 {
@@ -33,8 +33,8 @@ implementation
 
   components TimeSyncMessageC as ActiveMessageC;
   TimeSyncP.RadioControl    ->  ActiveMessageC;
-  TimeSyncP.Send            ->  ActiveMessageC.TimeSyncAMSendRadio[TIMESYNC_AM_FTSP];
-  TimeSyncP.Receive         ->  ActiveMessageC.Receive[TIMESYNC_AM_FTSP];
+  TimeSyncP.Send            ->  ActiveMessageC.TimeSyncAMSendRadio[TIMESYNC_AM_FCSA];
+  TimeSyncP.Receive         ->  ActiveMessageC.Receive[TIMESYNC_AM_FCSA];
   TimeSyncP.TimeSyncPacket  ->  ActiveMessageC;
 
   components LocalTimeMicroC;

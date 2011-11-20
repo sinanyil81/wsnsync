@@ -1,4 +1,4 @@
-#include "TimeSyncMsg.h"
+#include "FcsaMsg.h"
 
 generic module FcsaP(typedef precision_tag)
 {
@@ -56,7 +56,7 @@ implementation
     message_t* processedMsg;    
 
     message_t outgoingMsgBuffer;
-    TimeSyncMsg* outgoingMsg;
+    FcsaMsg* outgoingMsg;
 
     uint32_t processedMsgEventTime;
 
@@ -101,7 +101,7 @@ implementation
         float rate;
         error_t status;
         
-        TimeSyncMsg* msg = (TimeSyncMsg*)(call Send.getPayload(processedMsg, sizeof(TimeSyncMsg)));
+        FcsaMsg* msg = (FcsaMsg*)(call Send.getPayload(processedMsg, sizeof(FcsaMsg)));
 
 //         call RateConsensus.updateNeighbors(call LocalTime.get());
 
@@ -134,7 +134,7 @@ implementation
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
     {
         /* TODO */
-        uint16_t incomingID = (uint8_t)((TimeSyncMsg*)payload)->nodeID;
+        uint16_t incomingID = (uint8_t)((FcsaMsg*)payload)->nodeID;
         int16_t diff = (incomingID - TOS_NODE_ID);
         /* LINE topology */
         if( diff < -1 || diff > 1 )
@@ -247,7 +247,7 @@ implementation
         call RateConsensus.reset();
         call LogicalClock.start();        
 
-        atomic outgoingMsg = (TimeSyncMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(TimeSyncMsg));
+        atomic outgoingMsg = (FcsaMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(FcsaMsg));
 
         outgoingMsg->nodeID = TOS_NODE_ID;
         outgoingMsg->seqNum = 0;
