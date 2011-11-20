@@ -1,8 +1,8 @@
-module NeighborhoodC
+module NeighborsC
 {
     provides
     {
-        interface Neighborhood;
+        interface Neighbors;
     }
 }
 implementation
@@ -213,11 +213,11 @@ implementation
         return freeItem;
     }
 
-    command void Neighborhood.reset(){
+    command void Neighbors.reset(){
         clearNeighbors();
     }
 
-    command void Neighborhood.updateNeighbors(uint32_t currentTime){
+    command void Neighbors.update(uint32_t currentTime){
         int8_t i;
         uint32_t age;
 
@@ -230,7 +230,7 @@ implementation
         }
     }
 
-    command error_t Neighborhood.storeNeighborInfo(uint8_t neighborID,uint32_t neighborClock,uint32_t eventTime){
+    command error_t Neighbors.storeInfo(uint16_t neighborID,uint32_t neighborClock,uint32_t eventTime){
 
         uint8_t found = 0;
         int8_t index = getNeighborSlot(neighborID);
@@ -273,7 +273,7 @@ implementation
         return FAIL;        
     }
 
-    command error_t Neighborhood.getRelativeRate(uint16_t neighborID,float *rate){
+    command error_t Neighbors.getRelativeRate(uint16_t neighborID,float *rate){
         int8_t index = getNeighborSlot(neighborID);
 
         if(index >= 0){
@@ -282,7 +282,7 @@ implementation
             return SUCCESS;
         }
         
-        rate = 0.0;
+        *rate = 0.0;
         
         return FAIL;
     }

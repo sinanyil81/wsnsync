@@ -46,8 +46,8 @@ implementation
   components RandomC;
   TimeSyncP.Random -> RandomC;
 
-  components NeighborhoodC;
-  TimeSyncP.Neighborhood -> NeighborhoodC;
+  components NeighborsC;
+  TimeSyncP.Neighbors -> NeighborsC;
 
 #if defined(TIMESYNC_LEDS)
   components LedsC;
