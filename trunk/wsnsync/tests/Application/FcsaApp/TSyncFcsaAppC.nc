@@ -34,7 +34,7 @@
 
 #include "TSyncApp.h"
 
-configuration TSyncCRFtspAppC{
+configuration TSyncFcsaAppC{
 }
 implementation{
   components MainC,LedsC,NoSleepC; 
@@ -44,8 +44,8 @@ implementation{
   components new TimerMilliC() as Timer0;
   components new TimerMilliC() as Timer1;
    
-  components TimeSyncMicroC as TSync;
-  components new TSyncCRFtspAppModule(TMicro) as App; 
+  components FcsaMicroC as TSync;
+  components new TSyncFcsaAppModule(TMicro) as App; 
   //components MessageCounterC;
   
   MainC.SoftwareInit -> TSync;

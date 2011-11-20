@@ -1,4 +1,4 @@
-COMPONENT = TSyncCRFtspAppC
+COMPONENT = TSyncFcsaAppC
 
 CFLAGS += -DROOT_ID=1
 CFLAGS += -DTIMESYNC_RATE=30
@@ -8,7 +8,7 @@ CFLAGS += -DTIMESYNC_LEDS
 PFLAGS += -I../../../tos/lib/nosleep/
 
 #enable protocol
-PFLAGS += -I../../../tos/lib/crftsp/
+PFLAGS += -I../../../tos/lib/fcsa/
 
 #enable cc2420x
 PFLAGS += -I../../../tos/platforms/micaz/
