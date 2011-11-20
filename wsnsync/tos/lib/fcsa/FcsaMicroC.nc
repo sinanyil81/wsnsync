@@ -1,6 +1,6 @@
 #include "TimeSyncMsg.h"
 
-configuration TimeSyncMicroC
+configuration FcsaMicroC
 {
   uses interface Boot;
   provides interface Init;
