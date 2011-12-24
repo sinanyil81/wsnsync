@@ -1,6 +1,6 @@
-#include "FcsaMsg.h"
+#include "EgtspMsg.h"
 
-configuration FcsaMicroC
+configuration EgtspMicroC
 {
   uses interface Boot;
   provides interface Init;
@@ -21,7 +21,7 @@ implementation
 #error "LPL timesync is not available for your platform"
 #endif
 
-  components new FcsaP(TMicro) as TimeSyncP;
+  components new EgtspP(TMicro) as TimeSyncP;
 
   GlobalTime      =   TimeSyncP;
   StdControl      =   TimeSyncP;
@@ -33,8 +33,8 @@ implementation
 
   components TimeSyncMessageC as ActiveMessageC;
   TimeSyncP.RadioControl    ->  ActiveMessageC;
-  TimeSyncP.Send            ->  ActiveMessageC.TimeSyncAMSendRadio[TIMESYNC_AM_FCSA];
-  TimeSyncP.Receive         ->  ActiveMessageC.Receive[TIMESYNC_AM_FCSA];
+  TimeSyncP.Send            ->  ActiveMessageC.TimeSyncAMSendRadio[TIMESYNC_AM_EGTSP];
+  TimeSyncP.Receive         ->  ActiveMessageC.Receive[TIMESYNC_AM_EGTSP];
   TimeSyncP.TimeSyncPacket  ->  ActiveMessageC;
 
   components LocalTimeMicroC;
@@ -46,11 +46,11 @@ implementation
   components RandomC;
   TimeSyncP.Random -> RandomC;
 
-  components RateConsensusC;
-  TimeSyncP.RateConsensus -> RateConsensusC;
+  components EgtspNeighborTableC;
+  TimeSyncP.EgtspNeighborTable -> EgtspNeighborTableC;
 
-  components LogicalClockC;
-  TimeSyncP.LogicalClock -> LogicalClockC;
+  components EgtspClockC;
+  TimeSyncP.EgtspClock -> EgtspClockC;
   
 #if defined(TIMESYNC_LEDS)
   components LedsC;
