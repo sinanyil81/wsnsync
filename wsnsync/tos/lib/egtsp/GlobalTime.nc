@@ -64,6 +64,7 @@ interface GlobalTime<precision_tag>
 	 * @return SUCCESS if this mote is synchronized, FAIL otherwise.
 	 */
 	async command error_t local2Global(uint32_t *time);
+	async command error_t local2GlobalGradient(uint32_t *time);
 
 	/**
 	 * Converts the global time given in <code>time</code> into the

@@ -87,6 +87,16 @@ implementation
 
         return is_synced();
     }
+    
+    async command error_t GlobalTime.local2GlobalGradient(uint32_t *time)
+    {
+    	uint32_t c = *time;
+        call EgtspClock.getValue(&c);
+        call EgtspNeighborTable.getNeighborhoodTime(&c,*time);
+        *time = c;
+
+        return is_synced();
+    }
 
     async command error_t GlobalTime.global2Local(uint32_t *time)
     {
