@@ -1,4 +1,4 @@
-module EgtspC
+module EgtspClockC
 {
     provides
     {
