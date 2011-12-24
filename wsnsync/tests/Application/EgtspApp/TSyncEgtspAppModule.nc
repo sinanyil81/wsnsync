@@ -59,6 +59,7 @@ implementation{
   bool busy = FALSE;
 
   uint32_t  clock   = 0;
+  uint32_t  clock_gradient   = 0;
   float     skew    = 0;
   uint8_t   synced  = 0;
    
@@ -87,6 +88,7 @@ implementation{
 
     msgptr->nodeid = TOS_NODE_ID;
     msgptr->clock  = clock;
+    msgptr->clock_gradient  = clock_gradient;
     msgptr->skew   = *((uint32_t *)&skew);
     msgptr->synced = synced;
       
@@ -116,8 +118,9 @@ implementation{
       // global  time.
       if(msgptr->nodeid == 0){
         if (call PacketTimeStamp.isValid(msg)){
-          clock         = call PacketTimeStamp.timestamp(msg);
+          clock = clock_gradient = call PacketTimeStamp.timestamp(msg);
           synced        = call GlobalTime.local2Global(&clock);
+          synced        = call GlobalTime.local2GlobalGradient(&clock_gradient);
           skew          = call TimeSyncInfo.getSkew();
           call Timer0.startOneShot(50*TOS_NODE_ID + 20);
         }
