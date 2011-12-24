@@ -45,7 +45,7 @@ implementation
     }NeighborEntry;
 
     NeighborEntry neighbors[MAX_NEIGHBORS]; // neighbor table in order to discover neighbors
-    uint8_t numNeighbors = 0;
+    uint8_t numNeighbors;
     
     uint32_t getEstimatedNeighborLocalTime(uint8_t index, uint32_t localTime){
     	uint32_t estimate = localTime;
@@ -204,7 +204,7 @@ implementation
             clearNeighbor(i);
         }
 
-        numNeighbors = 0;
+        atomic numNeighbors = 0;
     }
 
     int8_t getNeighborSlot(uint8_t id) {
@@ -263,11 +263,11 @@ implementation
         if (index >= 0) {
 
             if(checkEntry(index,timestamp,localTime) == SUCCESS){
-                neighbors[index].state = ENTRY_FULL;
-                neighbors[index].id = id;
-                neighbors[index].timestamp = timestamp;
-                neighbors[index].clock = globalTime;
-                neighbors[index].multiplier = multiplier;
+                atomic neighbors[index].state = ENTRY_FULL;
+                atomic neighbors[index].id = id;
+                atomic neighbors[index].timestamp = timestamp;
+                atomic neighbors[index].clock = globalTime;
+                atomic neighbors[index].multiplier = multiplier;
 
                 addNewEntry(neighbors[index].table,
                             &neighbors[index].tableEntries,
@@ -282,9 +282,9 @@ implementation
                                         &neighbors[index].offsetAverage);
                 }
                 else{
-                    neighbors[index].skew = 0.0;
-                    neighbors[index].localAverage = 0;
-                    neighbors[index].offsetAverage = 0;
+                    atomic neighbors[index].skew = 0.0;
+                    atomic neighbors[index].localAverage = 0;
+                    atomic neighbors[index].offsetAverage = 0;
                 }
 
                 return SUCCESS;
@@ -297,21 +297,21 @@ implementation
     command void EgtspNeighborTable.getNeighborhoodRate(float *myRate){
         uint8_t i;
 
-        numNeighbors = 0;
+        atomic numNeighbors = 0;
 
         for (i = 0; i < MAX_NEIGHBORS; i++) {
             if(neighbors[i].state == ENTRY_FULL){
                 *myRate += neighbors[i].skew*neighbors[i].multiplier;
                 *myRate += neighbors[i].multiplier;
                 *myRate += neighbors[i].skew;
-                numNeighbors++;
+                atomic numNeighbors++;
             }
         }
 
         *myRate /=(float)(numNeighbors+1);
     }
     
-    command void EgtspNeighborTable.getNeighborhoodTime(uint32_t *myClock,uint32_t timestamp){
+    async command void EgtspNeighborTable.getNeighborhoodTime(uint32_t *myClock,uint32_t timestamp){
         uint8_t i;
 		int32_t diffSum = 0;
 		int32_t diffSumRest = 0;
