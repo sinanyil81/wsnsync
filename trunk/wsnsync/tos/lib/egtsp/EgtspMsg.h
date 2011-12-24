@@ -1,8 +1,8 @@
-#if defined(FCSAMSG_H)
+#if defined(EGTSPMSG_H)
 #else
-#define FCSAMSG_H
+#define EGTSPMSG_H
 
-typedef nx_struct FcsaMsg
+typedef nx_struct EgtspMsg
 {	
 	nx_uint16_t	nodeID;		// the node if of the sender
     nx_uint32_t localTime;  // local time of the sender
@@ -11,11 +11,11 @@ typedef nx_struct FcsaMsg
 	nx_uint32_t	globalTime; // time of the root node	
     nx_uint8_t  seqNum;     // sequence number for the root
 	
-} FcsaMsg;
+} EgtspMsg;
 
 enum {
-    TIMESYNC_AM_FCSA = 0x3D,
-    FCSAMSG_LEN = sizeof(FcsaMsg),
+    TIMESYNC_AM_EGTSP = 0x3D,
+    EGTSPMSG_LEN = sizeof(EgtspMsg),
     TS_TIMER_MODE = 0,      // see TimeSyncMode interface
     TS_USER_MODE = 1,       // see TimeSyncMode interface
 };
