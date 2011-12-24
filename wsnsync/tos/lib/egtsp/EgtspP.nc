@@ -1,6 +1,6 @@
-#include "FcsaMsg.h"
+#include "EgtspMsg.h"
 
-generic module FcsaP(typedef precision_tag)
+generic module EgtspP(typedef precision_tag)
 {
     provides
     {
@@ -24,8 +24,8 @@ generic module FcsaP(typedef precision_tag)
         interface Leds;
         interface TimeSyncPacket<precision_tag,uint32_t>;
         interface LocalTime<precision_tag> as LocalTime;
-        interface RateConsensus;
-        interface LogicalClock;        
+        interface EgtspNeighborTable;
+        interface EgtspClock;        
 
 #ifdef LOW_POWER_LISTENING
         interface LowPowerListening;
@@ -56,7 +56,7 @@ implementation
     message_t* processedMsg;    
 
     message_t outgoingMsgBuffer;
-    FcsaMsg* outgoingMsg;
+    EgtspMsg* outgoingMsg;
 
     uint32_t processedMsgEventTime;
 
@@ -83,7 +83,7 @@ implementation
 
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
-        call LogicalClock.getValue(time);
+        call EgtspClock.getValue(time);
 
         return is_synced();
     }
@@ -101,18 +101,18 @@ implementation
         float rate;
         error_t status;
         
-        FcsaMsg* msg = (FcsaMsg*)(call Send.getPayload(processedMsg, sizeof(FcsaMsg)));
-
-//         call RateConsensus.updateNeighbors(call LocalTime.get());
+        EgtspMsg* msg = (EgtspMsg*)(call Send.getPayload(processedMsg, sizeof(EgtspMsg)));
 
         mult = msg->multiplier;
-        status = call RateConsensus.storeNeighborInfo(msg->nodeID,
-                                                      *((float *)&mult),
-                                                      msg->localTime,
-                                                      processedMsgEventTime);
+        status = call EgtspNeighborTable.storeInfo(msg->nodeID,
+                                        	      *((float *)&mult),
+                                            	  msg->localTime,
+                                                  msg->globalTime,
+                                                  processedMsgEventTime);
 
-        rate = call RateConsensus.getRate(call LogicalClock.getRate());
-        call LogicalClock.setRate(rate);
+        rate = call EgtspClock.getRate();
+        call EgtspNeighborTable.getNeighborhoodRate(&rate);
+        call EgtspClock.setRate(rate);
 
         if( (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
@@ -121,7 +121,7 @@ implementation
             goto exit;       
 
         if(status == SUCCESS){
-            call LogicalClock.setValue(msg->globalTime,processedMsgEventTime);
+            call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
             call Leds.led1Toggle();
         }
         
@@ -134,7 +134,7 @@ implementation
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
     {
         /* TODO */
-        uint16_t incomingID = (uint8_t)((FcsaMsg*)payload)->nodeID;
+        uint16_t incomingID = (uint8_t)((EgtspMsg*)payload)->nodeID;
         int16_t diff = (incomingID - TOS_NODE_ID);
         /* LINE topology */
         if( diff < -1 || diff > 1 )
@@ -165,10 +165,10 @@ implementation
         call GlobalTime.local2Global(&globalTime);
 
         if( ROOT_ID == TOS_NODE_ID ) {
-            call LogicalClock.setValue(globalTime,localTime);
+            call EgtspClock.setValue(globalTime,localTime);
         }
 
-        multiplier = call LogicalClock.getRate();
+        multiplier = call EgtspClock.getRate();
         outgoingMsg->multiplier = *((uint32_t*)(&multiplier));
         outgoingMsg->localTime = localTime;
         outgoingMsg->globalTime = globalTime;
@@ -176,7 +176,7 @@ implementation
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
 #endif
-         if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, FCSAMSG_LEN, localTime ) != SUCCESS ){
+         if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, EGTSPMSG_LEN, localTime ) != SUCCESS ){
             state &= ~STATE_SENDING;
             signal TimeSyncNotify.msg_sent();
         }
@@ -244,10 +244,10 @@ implementation
     command error_t Init.init()
     {   
         
-        call RateConsensus.reset();
-        call LogicalClock.start();        
+        call EgtspNeighborTable.reset();
+        call EgtspClock.start();        
 
-        atomic outgoingMsg = (FcsaMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(FcsaMsg));
+        atomic outgoingMsg = (EgtspMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(EgtspMsg));
 
         outgoingMsg->nodeID = TOS_NODE_ID;
         outgoingMsg->seqNum = 0;
@@ -280,7 +280,7 @@ implementation
         return SUCCESS;
     }
 
-    async command float     TimeSyncInfo.getSkew() { return call LogicalClock.getRate(); }
+    async command float     TimeSyncInfo.getSkew() { return call EgtspClock.getRate(); }
     async command uint16_t  TimeSyncInfo.getRootID() { return ROOT_ID; }
     async command uint8_t   TimeSyncInfo.getSeqNum() { return outgoingMsg->seqNum; }
 
