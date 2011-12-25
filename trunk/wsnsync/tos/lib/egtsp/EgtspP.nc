@@ -83,7 +83,7 @@ implementation
 
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
-        call EgtspClock.getValue(time);
+   		call EgtspClock.getValue(time);
 
         return is_synced();
     }
@@ -91,13 +91,18 @@ implementation
     async command error_t GlobalTime.local2GlobalGradient(uint32_t *time)
     {
     	uint32_t c = *time;
+    	float rootMultiplier = call EgtspClock.getRootRate();
+    	
         call EgtspClock.getValue(&c);
-        call EgtspNeighborTable.getNeighborhoodTime(&c,*time);
+        call EgtspNeighborTable.getNeighborhoodTime(&c,rootMultiplier,*time);
         *time = c;
 
         return is_synced();
     }
 
+	/**
+	* TODO
+	*/
     async command error_t GlobalTime.global2Local(uint32_t *time)
     {
 //         uint32_t approxLocalTime = *time - offsetAverage;
@@ -122,7 +127,11 @@ implementation
 
         rate = call EgtspClock.getRate();
         call EgtspNeighborTable.getNeighborhoodRate(&rate);
-        call EgtspClock.setRate(rate);
+        
+        call EgtspClock.setRate(rate);        
+        if(TOS_NODE_ID != ROOT_ID){
+    		call EgtspClock.setRootRate(rate);
+    	}
 
         if( (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
@@ -132,6 +141,7 @@ implementation
 
         if(status == SUCCESS){
             call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
+            call EgtspClock.setRootRate(msg->rootMultiplier);
             call Leds.led1Toggle();
         }
         
@@ -172,14 +182,20 @@ implementation
         float multiplier;
 
         globalTime = localTime = call GlobalTime.getLocalTime();
+        
+        /* set globalTime = localTime for the ROOT node */
+        if(TOS_NODE_ID != ROOT_ID){
+    		call EgtspClock.setValue(globalTime,localTime);
+    	}
+    	
         call GlobalTime.local2Global(&globalTime);
-
-        if( ROOT_ID == TOS_NODE_ID ) {
-            call EgtspClock.setValue(globalTime,localTime);
-        }
-
+        
         multiplier = call EgtspClock.getRate();
         outgoingMsg->multiplier = *((uint32_t*)(&multiplier));
+        
+        multiplier = call EgtspClock.getRootRate();
+        outgoingMsg->rootMultiplier = *((uint32_t*)(&multiplier));
+        
         outgoingMsg->localTime = localTime;
         outgoingMsg->globalTime = globalTime;
         
@@ -203,9 +219,7 @@ implementation
                 outgoingMsg->seqNum++;
                 call Leds.led2Toggle();
             }   
-        }
-
-        
+        }       
 
         state &= ~STATE_SENDING;
         signal TimeSyncNotify.msg_sent();
