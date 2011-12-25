@@ -54,10 +54,11 @@ implementation
     	return estimate;
     }
     
-	uint32_t getEstimatedNeighborGlobalTime(uint8_t index, uint32_t localTime){
-    	uint32_t diff = localTime - neighbors[index].timestamp;
+	uint32_t getEstimatedNeighborGlobalTime(uint8_t index,float rootMultiplier, uint32_t localTime){
+    	int32_t diff = localTime - neighbors[index].timestamp;
     	diff += (int32_t)(((float)diff)*neighbors[index].skew);
     	diff += (int32_t)(((float)diff)*neighbors[index].multiplier);
+    	diff = (int32_t)(((float)diff)/(1.0+rootMultiplier));
     	
     	return neighbors[index].clock + diff;
     }
@@ -311,15 +312,15 @@ implementation
         *myRate /=(float)(numNeighbors+1);
     }
     
-    async command void EgtspNeighborTable.getNeighborhoodTime(uint32_t *myClock,uint32_t timestamp){
+    async command void EgtspNeighborTable.getNeighborhoodTime(uint32_t *myClock,float rootMultiplier,uint32_t timestamp){
         uint8_t i;
-		int32_t diffSum = 0;
+		int64_t diffSum = 0;
 		int32_t diffSumRest = 0;
 
         for (i = 0; i < MAX_NEIGHBORS; i++) {
             if(neighbors[i].state == ENTRY_FULL){
-                diffSum += (getEstimatedNeighborGlobalTime(i,timestamp) - *myClock)/(numNeighbors+1);
-                diffSumRest += (getEstimatedNeighborGlobalTime(i,timestamp) - *myClock)%(numNeighbors+1);
+                diffSum += (int32_t)(getEstimatedNeighborGlobalTime(i,rootMultiplier,timestamp) - *myClock)/(numNeighbors+1);
+                diffSumRest += (getEstimatedNeighborGlobalTime(i,rootMultiplier,timestamp) - *myClock)%(numNeighbors+1);
             }
         }
         

@@ -6,10 +6,11 @@ typedef nx_struct EgtspMsg
 {	
 	nx_uint16_t	nodeID;		// the node if of the sender
     nx_uint32_t localTime;  // local time of the sender
-    nx_uint32_t multiplier; // rate multiplier for the sender
+    nx_uint32_t multiplier; // rate multiplier of the sender
 
-	nx_uint32_t	globalTime; // time of the root node	
-    nx_uint8_t  seqNum;     // sequence number for the root
+	nx_uint32_t	globalTime; 	// time of the root node
+	nx_uint32_t rootMultiplier; // rate multiplier of the root node	
+    nx_uint8_t  seqNum;     	// sequence number for the root
 	
 } EgtspMsg;
 
