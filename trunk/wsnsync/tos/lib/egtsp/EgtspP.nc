@@ -91,8 +91,9 @@ implementation
     async command error_t GlobalTime.local2GlobalGradient(uint32_t *time)
     {
     	uint32_t c = *time;
-    	float rootMultiplier = call EgtspClock.getRootRate();
+    	float rootMultiplier;
     	
+    	call EgtspClock.getRootRate(&rootMultiplier);    	
         call EgtspClock.getValue(&c);
         call EgtspNeighborTable.getNeighborhoodTime(&c,rootMultiplier,*time);
         *time = c;
@@ -125,11 +126,11 @@ implementation
                                                   msg->globalTime,
                                                   processedMsgEventTime);
 
-        rate = call EgtspClock.getRate();
+        call EgtspClock.getRate(&rate);
         call EgtspNeighborTable.getNeighborhoodRate(&rate);
         
         call EgtspClock.setRate(rate);        
-        if(TOS_NODE_ID != ROOT_ID){
+        if(TOS_NODE_ID == ROOT_ID){
     		call EgtspClock.setRootRate(rate);
     	}
 
@@ -141,7 +142,10 @@ implementation
 
         if(status == SUCCESS){
             call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
-            call EgtspClock.setRootRate(msg->rootMultiplier);
+            
+            mult = msg->rootMultiplier;
+            call EgtspClock.setRootRate(*((float *)&mult));
+            
             call Leds.led1Toggle();
         }
         
@@ -184,16 +188,16 @@ implementation
         globalTime = localTime = call GlobalTime.getLocalTime();
         
         /* set globalTime = localTime for the ROOT node */
-        if(TOS_NODE_ID != ROOT_ID){
+        if(TOS_NODE_ID == ROOT_ID){
     		call EgtspClock.setValue(globalTime,localTime);
     	}
     	
         call GlobalTime.local2Global(&globalTime);
         
-        multiplier = call EgtspClock.getRate();
+        call EgtspClock.getRate(&multiplier);
         outgoingMsg->multiplier = *((uint32_t*)(&multiplier));
         
-        multiplier = call EgtspClock.getRootRate();
+        call EgtspClock.getRootRate(&multiplier);
         outgoingMsg->rootMultiplier = *((uint32_t*)(&multiplier));
         
         outgoingMsg->localTime = localTime;
@@ -304,7 +308,13 @@ implementation
         return SUCCESS;
     }
 
-    async command float     TimeSyncInfo.getSkew() { return call EgtspClock.getRate(); }
+    async command float TimeSyncInfo.getSkew() {
+    	float rate;   	
+    	call EgtspClock.getRate(&rate);
+    	 
+    	return rate; 
+    }
+    
     async command uint16_t  TimeSyncInfo.getRootID() { return ROOT_ID; }
     async command uint8_t   TimeSyncInfo.getSeqNum() { return outgoingMsg->seqNum; }
 

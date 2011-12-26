@@ -29,13 +29,13 @@ implementation
         atomic rootMultiplier = rate;
     }
 
-    async command float EgtspClock.getRate(){
-        return multiplier;
+    async command void EgtspClock.getRate(float *rate){
+        *rate = multiplier;
     }
     
-    async command float EgtspClock.getRootRate(){
-        return rootMultiplier;
-    }    
+    async command void EgtspClock.getRootRate(float *rate){
+        *rate = rootMultiplier;
+    }
 
     command void EgtspClock.setValue(uint32_t value,uint32_t localTime){
         atomic{
@@ -45,13 +45,15 @@ implementation
     }
 
     async command void EgtspClock.getValue(uint32_t *time){
-        int32_t timePassed = *time - lastUpdate;
-        timePassed += (int32_t)(multiplier*(int32_t)(timePassed));
-        
-        /* only modification in order to synchronize to the hw-clock value */
-        timePassed = (int32_t)((float)timePassed)/(1.0 + rootMultiplier);
+    
+        uint32_t timePassed = *time - lastUpdate;
+        float r = 1.0/(rootMultiplier + 1.0) - 1.0;
+               
+        timePassed += (int32_t)(multiplier * (int32_t)(timePassed));              
 
-        *time = offset;
-        *time += timePassed;        
+        /* only modification in order to synchronize to the hw-clock value */        
+        timePassed += (int32_t) (r * (int32_t)(timePassed));
+				
+		*time = offset + timePassed;        
     }
 }

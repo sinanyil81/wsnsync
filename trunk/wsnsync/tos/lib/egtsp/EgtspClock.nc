@@ -8,9 +8,9 @@ interface EgtspClock
     
     command void setValue(uint32_t value,uint32_t localTime);
     
-    async command float getRate();
+    async command void getRate(float *rate);
     
-    async command float getRootRate();
+    async command void getRootRate(float *rate);
     
     async command void getValue(uint32_t *time);
 }
