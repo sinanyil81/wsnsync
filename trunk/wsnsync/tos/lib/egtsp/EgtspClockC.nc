@@ -47,12 +47,9 @@ implementation
     async command void EgtspClock.getValue(uint32_t *time){
     
         uint32_t timePassed = *time - lastUpdate;
-        float r = 1.0/(rootMultiplier + 1.0) - 1.0;
+        float r = multiplier/(rootMultiplier + 1.0) - rootMultiplier/(rootMultiplier + 1.0);
                
-        timePassed += (int32_t)(multiplier * (int32_t)(timePassed));              
-
-        /* only modification in order to synchronize to the hw-clock value */        
-        timePassed += (int32_t) (r * (int32_t)(timePassed));
+        timePassed += (int32_t)(r * (int32_t)(timePassed));              
 				
 		*time = offset + timePassed;        
     }
