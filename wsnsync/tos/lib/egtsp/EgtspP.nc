@@ -127,8 +127,7 @@ implementation
                                                   processedMsgEventTime);
 
         call EgtspClock.getRate(&rate);
-        call EgtspNeighborTable.getNeighborhoodRate(&rate);
-        
+        call EgtspNeighborTable.getNeighborhoodRate(&rate);        
         call EgtspClock.setRate(rate);        
         if(TOS_NODE_ID == ROOT_ID){
     		call EgtspClock.setRootRate(rate);
@@ -189,7 +188,7 @@ implementation
         
         /* set globalTime = localTime for the ROOT node */
         if(TOS_NODE_ID == ROOT_ID){
-    		call EgtspClock.setValue(globalTime,localTime);
+    		call EgtspClock.setValue(localTime,localTime);
     	}
     	
         call GlobalTime.local2Global(&globalTime);

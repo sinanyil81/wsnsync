@@ -309,7 +309,7 @@ implementation
             }
         }
 
-        *myRate /=(float)(numNeighbors+1);
+        *myRate = *myRate/(float)(numNeighbors+1);
     }
     
     async command void EgtspNeighborTable.getNeighborhoodTime(uint32_t *myClock,float rootMultiplier,uint32_t timestamp){
