@@ -83,20 +83,22 @@ implementation
 
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
-   		call EgtspClock.getValue(time);
+    	if(TOS_NODE_ID != ROOT_ID){
+	   		call EgtspClock.getValue(time);
+	   	}
 
         return is_synced();
     }
     
     async command error_t GlobalTime.local2GlobalGradient(uint32_t *time)
     {
-    	uint32_t c = *time;
+    	/*uint32_t c = *time;
     	float rootMultiplier;
     	
     	call EgtspClock.getRootRate(&rootMultiplier);    	
         call EgtspClock.getValue(&c);
         call EgtspNeighborTable.getNeighborhoodTime(&c,rootMultiplier,*time);
-        *time = c;
+        *time = c;*/
 
         return is_synced();
     }
@@ -129,17 +131,14 @@ implementation
         call EgtspClock.getRate(&rate);
         call EgtspNeighborTable.getNeighborhoodRate(&rate);        
         call EgtspClock.setRate(rate);        
-        if(TOS_NODE_ID == ROOT_ID){
-    		call EgtspClock.setRootRate(rate);
-    	}
-
+          
         if( (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
         }
         else
             goto exit;       
 
-        if(status == SUCCESS){
+        if( status == SUCCESS ){
             call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
             
             mult = msg->rootMultiplier;
@@ -184,19 +183,15 @@ implementation
         uint32_t localTime, globalTime;
         float multiplier;
 
-        globalTime = localTime = call GlobalTime.getLocalTime();
-        
-        /* set globalTime = localTime for the ROOT node */
-        if(TOS_NODE_ID == ROOT_ID){
-    		call EgtspClock.setValue(localTime,localTime);
-    	}
-    	
+        globalTime = localTime = call GlobalTime.getLocalTime();                    	
         call GlobalTime.local2Global(&globalTime);
-        
+                
         call EgtspClock.getRate(&multiplier);
         outgoingMsg->multiplier = *((uint32_t*)(&multiplier));
         
-        call EgtspClock.getRootRate(&multiplier);
+        if(TOS_NODE_ID != ROOT_ID){
+    		call EgtspClock.getRootRate(&multiplier);
+    	}    	
         outgoingMsg->rootMultiplier = *((uint32_t*)(&multiplier));
         
         outgoingMsg->localTime = localTime;

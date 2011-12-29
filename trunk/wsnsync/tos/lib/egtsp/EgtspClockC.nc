@@ -47,10 +47,9 @@ implementation
     async command void EgtspClock.getValue(uint32_t *time){
     
         uint32_t timePassed = *time - lastUpdate;
-        float r = multiplier/(rootMultiplier + 1.0) - rootMultiplier/(rootMultiplier + 1.0);
-               
-        timePassed += (int32_t)(r * (int32_t)(timePassed));              
-				
-		*time = offset + timePassed;        
+        float r = (multiplier - rootMultiplier)/(rootMultiplier + 1.0);
+        
+        *time = offset;
+        *time += timePassed + (int32_t)(r*(int32_t)(timePassed));        
     }
 }
