@@ -30,7 +30,7 @@ implementation
 
     typedef struct NeighborEntry{
         uint8_t state;                      // is entry full or empty ?
-        uint8_t id;                         // ID of the neighbor
+        uint16_t id;                        // ID of the neighbor
         float multiplier;                   // latest rate multiplier received
 
         TableItem   table[MAX_ENTRIES];     // stores the timestamp pairs in order to calculate
@@ -191,7 +191,7 @@ implementation
         numNeighbors = 0;
     }
 
-    int8_t getNeighborSlot(uint8_t id) {
+    int8_t getNeighborSlot(uint16_t id) {
         int8_t i;
 
         for (i = 0; i < MAX_NEIGHBORS; i++) {
@@ -232,7 +232,7 @@ implementation
         }
     }
 
-    command error_t RateConsensus.storeNeighborInfo(uint8_t neighborID,float multiplier, uint32_t neighborClock,uint32_t eventTime){
+    command error_t RateConsensus.storeNeighborInfo(uint16_t neighborID,float multiplier, uint32_t neighborClock,uint32_t eventTime){
 
         uint8_t found = 0;
         int8_t index = getNeighborSlot(neighborID);
