@@ -1,6 +1,6 @@
 COMPONENT=TSyncAppC
 
-PFLAGS += -I../Application/RftspApp/
+PFLAGS += -I../Application/EgtspApp/
 CFLAGS += -DPERIOD=20000
 #CFLAGS += -DTOSH_DATA_LENGTH=40
 
