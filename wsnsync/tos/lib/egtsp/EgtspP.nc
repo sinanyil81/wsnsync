@@ -92,13 +92,10 @@ implementation
     
     async command error_t GlobalTime.local2GlobalGradient(uint32_t *time)
     {
-    	/*uint32_t c = *time;
-    	float rootMultiplier;
+    	uint32_t localTime = *time;
     	
-    	call EgtspClock.getRootRate(&rootMultiplier);    	
-        call EgtspClock.getValue(&c);
-        call EgtspNeighborTable.getNeighborhoodTime(&c,rootMultiplier,*time);
-        *time = c;*/
+    	call GlobalTime.local2Global(time);   	   	        
+        call EgtspNeighborTable.getNeighborhoodTime(time,localTime);
 
         return is_synced();
     }
@@ -115,15 +112,17 @@ implementation
 
     void task processMsg()
     {
-        uint32_t mult;
+        uint32_t mult,rootMult;
         float rate;
         error_t status;
         
         EgtspMsg* msg = (EgtspMsg*)(call Send.getPayload(processedMsg, sizeof(EgtspMsg)));
 
         mult = msg->multiplier;
+        rootMult = msg->rootMultiplier;
         status = call EgtspNeighborTable.storeInfo(msg->nodeID,
                                         	      *((float *)&mult),
+                                        	      *((float *)&rootMult),
                                             	  msg->localTime,
                                                   msg->globalTime,
                                                   processedMsgEventTime);
