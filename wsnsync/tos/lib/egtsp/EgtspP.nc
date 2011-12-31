@@ -157,10 +157,23 @@ implementation
         /* TODO */
         uint16_t incomingID = (uint8_t)((EgtspMsg*)payload)->nodeID;
         int16_t diff = (incomingID - TOS_NODE_ID);
-        /* LINE topology */
-        if( diff < -1 || diff > 1 )
-            return msg;
-        /* TODO */
+
+//        /* LINE topology */
+//        if( diff < -1 || diff > 1 )
+//            return msg;
+//        /* TODO */
+        
+        /* RING of 20 sensor nodes */
+        if(TOS_NODE_ID == 1){
+        	if( incomingID !=20 && incomingID!=2)
+            	return msg;
+        }
+        else if(TOS_NODE_ID == 20){
+        	if( incomingID !=1 && incomingID!=19)
+            	return msg;
+        }
+        else if( diff < -1 || diff > 1 )
+        	return msg;
 
         if( (state & STATE_PROCESSING) == 0 && call TimeSyncPacket.isValid(msg)) {
             message_t* old = processedMsg;
