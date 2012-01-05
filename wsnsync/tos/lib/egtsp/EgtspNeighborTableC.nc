@@ -247,11 +247,16 @@ implementation
         int8_t i;
         uint32_t age;
 
+		atomic numNeighbors = 0; 
+		
         for (i = 0; i < MAX_NEIGHBORS; ++i) {
             age = time - neighbors[i].timestamp;
             
             if ((age >= (NEIGHBOR_TIMEOUT*1000000L)) && (neighbors[i].state == ENTRY_FULL)){
                 clearNeighbor(i);
+            }
+            else if(neighbors[i].state == ENTRY_FULL){
+            	atomic numNeighbors++; 
             }
         }
     }
@@ -307,14 +312,11 @@ implementation
     	float rateSum = *myRate;
         uint8_t i;
 
-        atomic numNeighbors = 0;
-
         for (i = 0; i < MAX_NEIGHBORS; i++) {
             if(neighbors[i].state == ENTRY_FULL){
                 rateSum += neighbors[i].skew*neighbors[i].multiplier;
                 rateSum += neighbors[i].multiplier;
                 rateSum += neighbors[i].skew;
-                atomic numNeighbors++;
             }
         }
 
@@ -322,7 +324,7 @@ implementation
         *myRate = rateSum;
     }
     
-    async command void EgtspNeighborTable.getNeighborhoodTime(uint32_t *myClock,uint32_t timestamp){
+    async command void EgtspNeighborTable.getNeighborhoodOffset(uint32_t *myOffset,uint32_t myClock,uint32_t timestamp){
         uint8_t i;
 		int64_t diffSum = 0;
 		int32_t diffSumRest = 0;
@@ -331,11 +333,11 @@ implementation
             if(neighbors[i].state == ENTRY_FULL){
             	uint32_t neighborTime = getNeighborGlobalTime(i,timestamp);
             	 
-                diffSum 	+= (int32_t)(neighborTime - *myClock)/(numNeighbors+1);
-                diffSumRest += (neighborTime - *myClock)%(numNeighbors+1);
+                diffSum 	+= (int32_t)(neighborTime - myClock)/(numNeighbors+1);
+                diffSumRest += (neighborTime - myClock)%(numNeighbors+1);
             }
         }
         
-        *myClock += diffSum + diffSumRest/(numNeighbors+1);
+        *myOffset += diffSum + diffSumRest/(numNeighbors+1);
     }
 }
