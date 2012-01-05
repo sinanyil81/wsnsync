@@ -120,7 +120,7 @@ implementation{
         if (call PacketTimeStamp.isValid(msg)){
           clock = clock_gradient = call PacketTimeStamp.timestamp(msg);
           synced        = call GlobalTime.local2Global(&clock);
-          synced        = call GlobalTime.local2GlobalGradient(&clock_gradient);
+          synced        = call GlobalTime.local2GlobalUTC(&clock_gradient);
           skew          = call TimeSyncInfo.getSkew();
           call Timer0.startOneShot(50*TOS_NODE_ID + 20);
         }
