@@ -9,7 +9,8 @@ typedef nx_struct EgtspMsg
     nx_uint32_t multiplier; // rate multiplier of the sender
 
 	nx_uint32_t	globalTime; 	// time of the root node
-	nx_uint32_t rootMultiplier; // rate multiplier of the root node	
+	nx_uint32_t rootMultiplier; // rate multiplier of the root node
+	nx_uint32_t rootOffset; 	// the offset between the logical clock and the hardware clock of the root node	
     nx_uint8_t  seqNum;     	// sequence number for the root
 	
 } EgtspMsg;
