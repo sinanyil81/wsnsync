@@ -10,11 +10,15 @@ interface EgtspClock
     
     command void setOffset(uint32_t offset);
     
+    command void setUTCOffset(uint32_t offset);
+    
     async command void getRate(float *rate);
     
     async command void getRootRate(float *rate);
     
     async command void getOffset(uint32_t *offset);
+    
+    async command void getUTCOffset(uint32_t *offset);
     
     async command void getValue(uint32_t *time);
 }

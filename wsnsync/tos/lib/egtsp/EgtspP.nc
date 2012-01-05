@@ -39,7 +39,7 @@ implementation
 #endif
 
     enum {
-        BEACON_RATE           = TIMESYNC_RATE,  // how often send the beacon msg (in seconds)
+        BEACON_RATE = TIMESYNC_RATE,  // how often send the beacon msg (in seconds)
     };
 
     enum {
@@ -83,20 +83,20 @@ implementation
 
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
-    	if(TOS_NODE_ID != ROOT_ID){
-	   		call EgtspClock.getValue(time);
-	   	}
-
-        return is_synced();
+    	call EgtspClock.getValue(time);
+	   	
+	   	return is_synced();
     }
     
-    async command error_t GlobalTime.local2GlobalGradient(uint32_t *time)
+    async command error_t GlobalTime.local2GlobalUTC(uint32_t *time)
     {
-    	uint32_t localTime = *time;
+    	uint32_t offset;
     	
-    	call GlobalTime.local2Global(time);   	   	        
-        call EgtspNeighborTable.getNeighborhoodTime(time,localTime);
-
+    	call GlobalTime.local2Global(time);
+    	call EgtspClock.getUTCOffset(&offset);
+    	    	   	        
+        *time += offset; 
+        
         return is_synced();
     }
 
@@ -115,9 +115,12 @@ implementation
         uint32_t mult,rootMult;
         float rate;
         error_t status;
-        
+        uint32_t offset;
+        uint32_t time = processedMsgEventTime;
+                
         EgtspMsg* msg = (EgtspMsg*)(call Send.getPayload(processedMsg, sizeof(EgtspMsg)));
 
+		/* insert new neighbor data */
         mult = msg->multiplier;
         rootMult = msg->rootMultiplier;
         status = call EgtspNeighborTable.storeInfo(msg->nodeID,
@@ -126,10 +129,22 @@ implementation
                                             	  msg->localTime,
                                                   msg->globalTime,
                                                   processedMsgEventTime);
-
+		/* update neighborhood */
+		call EgtspNeighborTable.update(processedMsgEventTime);
+				
+		/* calculate and set new logical clock rate multiplier */		
         call EgtspClock.getRate(&rate);
         call EgtspNeighborTable.getNeighborhoodRate(&rate);        
-        call EgtspClock.setRate(rate);        
+        call EgtspClock.setRate(rate);                
+        if(TOS_NODE_ID != ROOT_ID){
+        	call EgtspClock.setRootRate(rate);
+        }
+        
+        /* calculate and set new logical clock offset */
+        call EgtspClock.getOffset(&offset);
+        call EgtspClock.getValue(&time);        	
+        call EgtspNeighborTable.getNeighborhoodOffset(&offset,time,processedMsgEventTime);
+        call EgtspClock.setOffset(offset);                      
           
         if( (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
@@ -137,15 +152,16 @@ implementation
         else
             goto exit;       
 
-        if( status == SUCCESS ){
-            call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
-            
+ 		if( status == SUCCESS ){
+ 			/* store root's logical clock rate multiplier */
             mult = msg->rootMultiplier;
-            call EgtspClock.setRootRate(*((float *)&mult));
+            call EgtspClock.setRootRate(*((float *)&mult));           
+            /* store root's offset = (logical clock - local clock) */
+            call EgtspClock.setUTCOffset(msg->rootOffset);
             
             call Leds.led1Toggle();
         }
-        
+         
         signal TimeSyncNotify.msg_received();
 
     exit:
@@ -192,22 +208,32 @@ implementation
 
     task void sendMsg()
     {
-        uint32_t localTime, globalTime;
+        uint32_t localTime, globalTime,offset;
         float multiplier;
 
         globalTime = localTime = call GlobalTime.getLocalTime();                    	
         call GlobalTime.local2Global(&globalTime);
+        
+        /* in order to prevent large estimation errors */
+        call EgtspClock.setValue(globalTime,localTime);
                 
         call EgtspClock.getRate(&multiplier);
         outgoingMsg->multiplier = *((uint32_t*)(&multiplier));
-        
-        if(TOS_NODE_ID != ROOT_ID){
-    		call EgtspClock.getRootRate(&multiplier);
-    	}    	
+               
+        call EgtspClock.getRootRate(&multiplier);   	
         outgoingMsg->rootMultiplier = *((uint32_t*)(&multiplier));
-        
+               
         outgoingMsg->localTime = localTime;
         outgoingMsg->globalTime = globalTime;
+        
+        if(TOS_NODE_ID == ROOT_ID){
+        	offset = globalTime - localTime;
+        }
+        else{
+        	call EgtspClock.getUTCOffset(&offset);
+        }
+        
+        outgoingMsg->rootOffset = offset;
         
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
