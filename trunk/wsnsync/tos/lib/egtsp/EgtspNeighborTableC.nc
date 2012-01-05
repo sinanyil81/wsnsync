@@ -4,6 +4,8 @@ module EgtspNeighborTableC
     {
         interface EgtspNeighborTable;
     }
+    
+    uses interface Leds;
 }
 implementation
 {
@@ -197,11 +199,11 @@ implementation
     }
 
     void clearNeighbor(uint8_t i){
-        neighbors[i].state = ENTRY_EMPTY;
-        neighbors[i].multiplier = 0.0;
-        neighbors[i].rootMultiplier = 0.0;
-        neighbors[i].skew = 0.0;
-        neighbors[i].clock = 0;
+        atomic neighbors[i].state = ENTRY_EMPTY;
+        atomic neighbors[i].multiplier = 0.0;
+        atomic neighbors[i].rootMultiplier = 0.0;
+        atomic neighbors[i].skew = 0.0;
+        atomic neighbors[i].clock = 0;
         clearTable(neighbors[i].table,&neighbors[i].tableEntries);
     }
 
@@ -254,6 +256,9 @@ implementation
             
             if ((age >= (NEIGHBOR_TIMEOUT*1000000L)) && (neighbors[i].state == ENTRY_FULL)){
                 clearNeighbor(i);
+                call Leds.led0Toggle();
+                call Leds.led1Toggle();
+                call Leds.led2Toggle();
             }
             else if(neighbors[i].state == ENTRY_FULL){
             	atomic numNeighbors++; 
@@ -338,6 +343,6 @@ implementation
             }
         }
         
-        *myOffset += diffSum + diffSumRest/(numNeighbors+1);
+        *myOffset = diffSum + diffSumRest/(numNeighbors+1);
     }
 }

@@ -43,7 +43,8 @@ implementation
     
     command void EgtspClock.setOffset(uint32_t value){
         atomic{
-            offset = value;
+            //offset = value;
+            base += value;
         }
     }    
     
@@ -73,7 +74,8 @@ implementation
         uint32_t timePassed = *time - lastUpdate;
         float r = (multiplier - rootMultiplier)/(rootMultiplier + 1.0);
         
-        *time = base + offset;
+        //*time = base + offset;
+        *time = base;
         *time += timePassed + (int32_t)(r*(int32_t)(timePassed));        
     }
 }
