@@ -48,6 +48,7 @@ implementation
 
   components EgtspNeighborTableC;
   TimeSyncP.EgtspNeighborTable -> EgtspNeighborTableC;
+  
 
   components EgtspClockC;
   TimeSyncP.EgtspClock -> EgtspClockC;
@@ -58,7 +59,9 @@ implementation
   components NoLedsC as LedsC;
 #endif
   TimeSyncP.Leds  ->  LedsC;
-
+  
+  EgtspNeighborTableC.Leds -> LedsC;
+  
 #ifdef LOW_POWER_LISTENING
   TimeSyncP.LowPowerListening -> ActiveMessageC;
 #endif
