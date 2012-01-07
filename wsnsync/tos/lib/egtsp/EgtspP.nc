@@ -115,7 +115,7 @@ implementation
         uint32_t mult,rootMult;
         float rate;
         error_t status;
-        uint32_t offset = 0;
+        uint32_t offset;
         uint32_t time = processedMsgEventTime;
                 
         EgtspMsg* msg = (EgtspMsg*)(call Send.getPayload(processedMsg, sizeof(EgtspMsg)));
@@ -131,6 +131,10 @@ implementation
                                                   processedMsgEventTime);
 		/* update neighborhood */
 		call EgtspNeighborTable.update(processedMsgEventTime);
+		
+		/* calculate and set logical clock value */
+        call EgtspClock.getValue(&time);
+        call EgtspClock.setValue(time,processedMsgEventTime);
 				
 		/* calculate and set new logical clock rate multiplier */		
         call EgtspClock.getRate(&rate);
@@ -138,12 +142,11 @@ implementation
         call EgtspClock.setRate(rate);                
         if(TOS_NODE_ID == ROOT_ID){
         	call EgtspClock.setRootRate(rate);
-        }
-        
+        }               
+                	
         /* calculate and set new logical clock offset */
-        call EgtspClock.getValue(&time);        	
         call EgtspNeighborTable.getNeighborhoodOffset(&offset,time,processedMsgEventTime);
-        call EgtspClock.setValue(time + offset,processedMsgEventTime);                      
+        call EgtspClock.setOffset(offset);        	                              
           
         if( (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
@@ -174,21 +177,21 @@ implementation
         int16_t diff = (incomingID - TOS_NODE_ID);
 
 //        /* LINE topology */
-//        if( diff < -1 || diff > 1 )
-//            return msg;
+        if( diff < -1 || diff > 1 )
+            return msg;
 //        /* TODO */
         
         /* RING of 20 sensor nodes */
-        if(TOS_NODE_ID == 1){
-        	if( incomingID !=20 && incomingID!=2)
-            	return msg;
-        }
-        else if(TOS_NODE_ID == 20){
-        	if( incomingID !=1 && incomingID!=19)
-            	return msg;
-        }
-        else if( diff < -1 || diff > 1 )
-        	return msg;
+//        if(TOS_NODE_ID == 1){
+//        	if( incomingID !=20 && incomingID!=2)
+//            	return msg;
+//        }
+//        else if(TOS_NODE_ID == 20){
+//        	if( incomingID !=1 && incomingID!=19)
+//            	return msg;
+//        }
+//        else if( diff < -1 || diff > 1 )
+//        	return msg;
 
         if( (state & STATE_PROCESSING) == 0 && call TimeSyncPacket.isValid(msg)) {
             message_t* old = processedMsg;
@@ -212,10 +215,7 @@ implementation
 
         globalTime = localTime = call GlobalTime.getLocalTime();                    	
         call GlobalTime.local2Global(&globalTime);
-        
-        /* in order to prevent large estimation errors */
-        call EgtspClock.setValue(globalTime,localTime);
-                
+                        
         call EgtspClock.getRate(&multiplier);
         outgoingMsg->multiplier = *((uint32_t*)(&multiplier));
                
