@@ -338,8 +338,8 @@ implementation
             if(neighbors[i].state == ENTRY_FULL){
             	uint32_t neighborTime = getNeighborGlobalTime(i,timestamp);
             	 
-                diffSum 	+= (int32_t)(neighborTime - myClock)/(numNeighbors+1);
-                diffSumRest += (neighborTime - myClock)%(numNeighbors+1);
+                diffSum 	+= (int32_t) (neighborTime - myClock) / (numNeighbors+1);
+                diffSumRest += (neighborTime - myClock) % (numNeighbors+1);
             }
         }
         
