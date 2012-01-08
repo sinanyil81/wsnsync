@@ -39,7 +39,8 @@ implementation
 #endif
 
     enum {
-        BEACON_RATE = TIMESYNC_RATE,  // how often send the beacon msg (in seconds)
+        BEACON_RATE  = TIMESYNC_RATE,  // how often send the beacon msg (in seconds)
+        CLOCK_ERROR_LIMIT = 1000
     };
 
     enum {
@@ -115,10 +116,13 @@ implementation
         uint32_t mult,rootMult;
         float rate;
         error_t status;
-        uint32_t offset;
+        int32_t offset;
         uint32_t time = processedMsgEventTime;
                 
         EgtspMsg* msg = (EgtspMsg*)(call Send.getPayload(processedMsg, sizeof(EgtspMsg)));
+
+		/* calculate logical clock value */
+        call EgtspClock.getValue(&time);
 
 		/* insert new neighbor data */
         mult = msg->multiplier;
@@ -129,12 +133,9 @@ implementation
                                             	  msg->localTime,
                                                   msg->globalTime,
                                                   processedMsgEventTime);
-		/* update neighborhood */
-		call EgtspNeighborTable.update(processedMsgEventTime);
 		
-		/* calculate and set logical clock value */
-        call EgtspClock.getValue(&time);
-        call EgtspClock.setValue(time,processedMsgEventTime);
+		/* update neighborhood */
+		call EgtspNeighborTable.update(processedMsgEventTime);		
 				
 		/* calculate and set new logical clock rate multiplier */		
         call EgtspClock.getRate(&rate);
@@ -142,11 +143,12 @@ implementation
         call EgtspClock.setRate(rate);                
         if(TOS_NODE_ID == ROOT_ID){
         	call EgtspClock.setRootRate(rate);
-        }               
+        }                       
                 	
         /* calculate and set new logical clock offset */
+        call EgtspClock.setValue(time,processedMsgEventTime);
         call EgtspNeighborTable.getNeighborhoodOffset(&offset,time,processedMsgEventTime);
-        call EgtspClock.setOffset(offset);        	                              
+        call EgtspClock.setOffset(offset);               	                             
           
         if( (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
@@ -155,6 +157,14 @@ implementation
             goto exit;       
 
  		if( status == SUCCESS ){
+ 			/* check wheter the error is large or not */
+ 			int32_t timeError = (int32_t)(time - msg->globalTime);
+ 			if((timeError > CLOCK_ERROR_LIMIT) || (timeError < -CLOCK_ERROR_LIMIT))
+        	{
+        		call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
+            	call EgtspClock.setOffset(0);
+        	}
+ 			
  			/* store root's logical clock rate multiplier */
             mult = msg->rootMultiplier;
             call EgtspClock.setRootRate(*((float *)&mult));           
