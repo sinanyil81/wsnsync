@@ -8,7 +8,7 @@ module EgtspClockC
 implementation
 {
     uint32_t base;                    	// base of the logical clock
-    uint32_t offset;                    // offset of the logical clock
+    int32_t offset;                     // offset of the logical clock
     uint32_t UTCOffset;                 // offset of the logical clock
     float multiplier;                   // rate multiplier of the logical clock
     float rootMultiplier;               // rate multiplier of the root node
@@ -41,7 +41,7 @@ implementation
         *rate = rootMultiplier;
     }
     
-    command void EgtspClock.setOffset(uint32_t value){
+    command void EgtspClock.setOffset(int32_t value){
         atomic{
             offset = value;
         }
@@ -60,7 +60,7 @@ implementation
         }
     }
     
-    async command void EgtspClock.getOffset(uint32_t *o){
+    async command void EgtspClock.getOffset(int32_t *o){
     	*o = offset;
     }
     
@@ -73,7 +73,7 @@ implementation
         uint32_t timePassed = *time - lastUpdate;
         float r = (multiplier - rootMultiplier)/(rootMultiplier + 1.0);
         
-        *time = base + offset;
-        *time += timePassed + (int32_t)(r*(int32_t)(timePassed));        
+        *time = base + timePassed;
+        *time += offset + (int32_t)(r*(int32_t)(timePassed));        
     }
 }

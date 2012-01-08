@@ -8,7 +8,7 @@ interface EgtspClock
     
     command void setValue(uint32_t value,uint32_t localTime);
     
-    command void setOffset(uint32_t offset);
+    command void setOffset(int32_t offset);
     
     command void setUTCOffset(uint32_t offset);
     
@@ -16,7 +16,7 @@ interface EgtspClock
     
     async command void getRootRate(float *rate);
     
-    async command void getOffset(uint32_t *offset);
+    async command void getOffset(int32_t *offset);
     
     async command void getUTCOffset(uint32_t *offset);
     

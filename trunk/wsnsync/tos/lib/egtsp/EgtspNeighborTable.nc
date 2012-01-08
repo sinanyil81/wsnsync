@@ -8,5 +8,6 @@ interface EgtspNeighborTable
                                
     command void getNeighborhoodRate(float *myRate);
     
-    async command void getNeighborhoodOffset(uint32_t *myOffset,uint32_t myClock,uint32_t timestamp);
+    command void getNeighborhoodOffset(int32_t *myOffset, uint32_t clock, uint32_t timestamp);
+        
 }
