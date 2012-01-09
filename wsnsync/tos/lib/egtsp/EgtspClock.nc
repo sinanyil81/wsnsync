@@ -21,4 +21,6 @@ interface EgtspClock
     async command void getUTCOffset(uint32_t *offset);
     
     async command void getValue(uint32_t *time);
+    
+    command void update(uint32_t time);
 }
