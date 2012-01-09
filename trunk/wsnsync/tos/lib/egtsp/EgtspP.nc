@@ -146,7 +146,10 @@ implementation
         }                       
                 	
         /* calculate and set new logical clock offset */
-        call EgtspClock.setValue(time,processedMsgEventTime);
+        //call EgtspClock.setValue(time,processedMsgEventTime);
+        call EgtspClock.update(processedMsgEventTime);
+        
+        call EgtspClock.getOffset(&offset);
         call EgtspNeighborTable.getNeighborhoodOffset(&offset,time,processedMsgEventTime);
         call EgtspClock.setOffset(offset);               	                             
           

@@ -336,11 +336,10 @@ implementation
             if(neighbors[i].state == ENTRY_FULL){            	            	 
             	uint32_t nClock = getNeighborGlobalTime(i,timestamp);
                 diffSum += (int32_t) (nClock-clock) / (numNeighbors+1);
-//    	            diffSumRest += off % (numNeighbors+1);            	 
+   	            diffSumRest += (nClock-clock) % (numNeighbors+1);            	 
             }
         }
         
-//        *myOffset = diffSum + diffSumRest/(numNeighbors+1);
-          *myOffset = (int32_t)diffSum;
+        *myOffset += diffSum + diffSumRest/(numNeighbors+1);
    }
 }

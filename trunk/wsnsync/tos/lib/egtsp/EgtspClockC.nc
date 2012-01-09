@@ -76,4 +76,15 @@ implementation
         *time = base + timePassed;
         *time += offset + (int32_t)(r*(int32_t)(timePassed));        
     }
+    
+    command void EgtspClock.update(uint32_t localTime){
+    	uint32_t timePassed = localTime - lastUpdate;
+        float r = (multiplier - rootMultiplier)/(rootMultiplier + 1.0);
+        
+        timePassed += (int32_t)(r*(int32_t)(timePassed));
+        atomic {
+        	base += timePassed;
+        	lastUpdate = localTime;
+        }
+    }
 }
