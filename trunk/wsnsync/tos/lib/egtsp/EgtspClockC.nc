@@ -71,7 +71,8 @@ implementation
     async command void EgtspClock.getValue(uint32_t *time){
     
         uint32_t timePassed = *time - lastUpdate;
-        float r = (multiplier - rootMultiplier)/(rootMultiplier + 1.0);
+        //float r = (multiplier - rootMultiplier)/(rootMultiplier + 1.0);
+        float r = multiplier;
         
         *time = base + timePassed;
         *time += offset + (int32_t)(r*(int32_t)(timePassed));        
@@ -79,7 +80,8 @@ implementation
     
     command void EgtspClock.update(uint32_t localTime){
     	uint32_t timePassed = localTime - lastUpdate;
-        float r = (multiplier - rootMultiplier)/(rootMultiplier + 1.0);
+        // float r = (multiplier - rootMultiplier)/(rootMultiplier + 1.0);
+        float r = multiplier;
         
         timePassed += (int32_t)(r*(int32_t)(timePassed));
         atomic {

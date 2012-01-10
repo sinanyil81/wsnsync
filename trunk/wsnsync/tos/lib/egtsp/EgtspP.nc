@@ -91,12 +91,17 @@ implementation
     
     async command error_t GlobalTime.local2GlobalUTC(uint32_t *time)
     {
-    	uint32_t offset;
+    	int32_t offset;
     	
     	call GlobalTime.local2Global(time);
     	call EgtspClock.getUTCOffset(&offset);
     	    	   	        
-        *time -= offset; 
+        *time -= offset;
+        
+        call EgtspClock.getOffset(&offset); 
+        *time = offset;
+        
+        *time = call EgtspNeighborTable.getNumNeighbors();
         
         return is_synced();
     }
