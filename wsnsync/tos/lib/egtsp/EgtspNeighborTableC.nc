@@ -64,8 +64,8 @@ implementation
         float r = neighbors[index].skew;        
         r += neighbors[index].multiplier;
         r += neighbors[index].multiplier*neighbors[index].skew;
-        r -= neighbors[index].rootMultiplier;
-        r /= (neighbors[index].rootMultiplier + 1.0);
+        // r -= neighbors[index].rootMultiplier;
+        // r /= (neighbors[index].rootMultiplier + 1.0);
         
         retVal += timePassed + (int32_t)(r*(int32_t)(timePassed));    	    
     	
@@ -262,6 +262,10 @@ implementation
             	}
             }           
         }                
+    }
+    
+    command uint32_t EgtspNeighborTable.getNumNeighbors(){
+    	return numNeighbors;
     }
 
     command error_t EgtspNeighborTable.storeInfo(uint16_t id,float multiplier,float rootMultiplier,uint32_t localTime,uint32_t globalTime,uint32_t timestamp){
