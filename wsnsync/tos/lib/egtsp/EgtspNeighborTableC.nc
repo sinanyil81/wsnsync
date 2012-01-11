@@ -1,11 +1,8 @@
 module EgtspNeighborTableC
 {
-    provides
-    {
-        interface EgtspNeighborTable;
-    }
-    
+    provides interface EgtspNeighborTable;   
     uses interface Leds;
+    uses interface DebugSerial;
 }
 implementation
 {
@@ -36,6 +33,9 @@ implementation
         float multiplier;                   // latest rate multiplier received
         float rootMultiplier;               // latest root multiplier received
         uint32_t clock; 					// latest clock received
+        
+        uint32_t clock1; 					// latest clock received
+        uint32_t clock2; 					// latest clock received
 
         TableItem   table[MAX_ENTRIES];     // stores the timestamp pairs in order to calculate
                                             // the slope of the least-squares line
@@ -61,13 +61,18 @@ implementation
 		uint32_t timePassed = localTime - neighbors[index].timestamp;
 		uint32_t retVal = neighbors[index].clock;
         
+        /* 
         float r = neighbors[index].skew;        
         r += neighbors[index].multiplier;
         r += neighbors[index].multiplier*neighbors[index].skew;
-        // r -= neighbors[index].rootMultiplier;
-        // r /= (neighbors[index].rootMultiplier + 1.0);
+        r -= neighbors[index].rootMultiplier;
+        r /= (neighbors[index].rootMultiplier + 1.0); 
         
-        retVal += timePassed + (int32_t)(r*(int32_t)(timePassed));    	    
+        retVal += timePassed + (int32_t)(r*(int32_t)(timePassed));
+        
+        */
+        
+        retVal += timePassed + (int32_t)(neighbors[index].rootMultiplier*(int32_t)(timePassed));    	    
     	
     	return retVal;
     }
@@ -283,12 +288,18 @@ implementation
         if (index >= 0) {
 
             if(checkEntry(index,timestamp,localTime) == SUCCESS){
+                neighbors[index].clock1 = getNeighborGlobalTime(index,timestamp);
+                neighbors[index].clock2 = neighbors[index].clock;
+                
                 neighbors[index].state = ENTRY_FULL;
                 neighbors[index].id = id;
                 neighbors[index].timestamp = timestamp;
-                neighbors[index].multiplier = multiplier;
-                neighbors[index].rootMultiplier = rootMultiplier;
                 neighbors[index].clock = globalTime;
+                
+                
+                
+                // neighbors[index].multiplier = multiplier;
+                // neighbors[index].rootMultiplier = rootMultiplier;                
 
                 addNewEntry(neighbors[index].table,
                             &neighbors[index].tableEntries,
@@ -307,6 +318,20 @@ implementation
                     neighbors[index].localAverage = 0;
                     neighbors[index].offsetAverage = 0;
                 }
+                
+                /* calculate and set multipliers */
+                {
+                	float r = neighbors[index].skew;        
+        			r += multiplier;
+        			r += multiplier*neighbors[index].skew;
+        			
+        			neighbors[index].multiplier = r;
+        			
+        			r -= rootMultiplier;
+        			r /= (rootMultiplier + 1.0);
+        			neighbors[index].rootMultiplier = r;         			        		
+                }
+                 
 
                 return SUCCESS;
             }
@@ -321,9 +346,12 @@ implementation
 
         for (i = 0; i < MAX_NEIGHBORS; i++) {
             if(neighbors[i].state == ENTRY_FULL){
+                /*
                 rateSum += neighbors[i].skew*neighbors[i].multiplier;
                 rateSum += neighbors[i].multiplier;
                 rateSum += neighbors[i].skew;
+                */                
+                rateSum += neighbors[i].multiplier;
             }
         }
 
@@ -340,10 +368,18 @@ implementation
             if(neighbors[i].state == ENTRY_FULL){            	            	 
             	uint32_t nClock = getNeighborGlobalTime(i,timestamp);
                 diffSum += (int32_t) (nClock-clock) / (numNeighbors+1);
-   	            diffSumRest += (nClock-clock) % (numNeighbors+1);            	 
+   	            diffSumRest += (nClock-clock) % (numNeighbors+1);
+   	            
+   	            call DebugSerial.sendSerial(clock,
+   	            							neighbors[i].clock2,
+   	            							neighbors[i].clock1,
+   	            							neighbors[i].clock,
+   	            							neighbors[i].timestamp,
+   	            							timestamp,
+   	            							*myOffset);
             }
         }
-        
-        *myOffset += diffSum + diffSumRest/(numNeighbors+1);
+                
+        *myOffset += diffSum + diffSumRest/(numNeighbors+1);              
    }
 }

@@ -47,9 +47,12 @@ implementation
   TimeSyncP.Random -> RandomC;
 
   components EgtspNeighborTableC;
-  TimeSyncP.EgtspNeighborTable -> EgtspNeighborTableC;
+  components DebugSerialC;
   
-
+  TimeSyncP.EgtspNeighborTable -> EgtspNeighborTableC;
+  EgtspNeighborTableC.DebugSerial -> DebugSerialC;
+  Boot = DebugSerialC;
+  
   components EgtspClockC;
   TimeSyncP.EgtspClock -> EgtspClockC;
   

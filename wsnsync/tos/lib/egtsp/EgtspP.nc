@@ -169,7 +169,7 @@ implementation
  			int32_t timeError = (int32_t)(time - msg->globalTime);
  			if((timeError > CLOCK_ERROR_LIMIT) || (timeError < -CLOCK_ERROR_LIMIT))
         	{
-        		call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
+        		//call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
             	call EgtspClock.setOffset(0);
         	}
  			
