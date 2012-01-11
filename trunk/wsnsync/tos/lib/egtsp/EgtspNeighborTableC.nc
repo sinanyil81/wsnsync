@@ -61,7 +61,6 @@ implementation
 		uint32_t timePassed = localTime - neighbors[index].timestamp;
 		uint32_t retVal = neighbors[index].clock;
         
-        /* 
         float r = neighbors[index].skew;        
         r += neighbors[index].multiplier;
         r += neighbors[index].multiplier*neighbors[index].skew;
@@ -70,9 +69,7 @@ implementation
         
         retVal += timePassed + (int32_t)(r*(int32_t)(timePassed));
         
-        */
-        
-        retVal += timePassed + (int32_t)(neighbors[index].rootMultiplier*(int32_t)(timePassed));    	    
+        // retVal += timePassed + (int32_t)(neighbors[index].rootMultiplier*(int32_t)(timePassed));    	    
     	
     	return retVal;
     }
@@ -295,11 +292,9 @@ implementation
                 neighbors[index].id = id;
                 neighbors[index].timestamp = timestamp;
                 neighbors[index].clock = globalTime;
-                
-                
-                
-                // neighbors[index].multiplier = multiplier;
-                // neighbors[index].rootMultiplier = rootMultiplier;                
+                        
+                neighbors[index].multiplier = multiplier;
+                neighbors[index].rootMultiplier = rootMultiplier;                
 
                 addNewEntry(neighbors[index].table,
                             &neighbors[index].tableEntries,
@@ -320,7 +315,7 @@ implementation
                 }
                 
                 /* calculate and set multipliers */
-                {
+                /* {
                 	float r = neighbors[index].skew;        
         			r += multiplier;
         			r += multiplier*neighbors[index].skew;
@@ -330,7 +325,7 @@ implementation
         			r -= rootMultiplier;
         			r /= (rootMultiplier + 1.0);
         			neighbors[index].rootMultiplier = r;         			        		
-                }
+                } */
                  
 
                 return SUCCESS;
@@ -346,12 +341,12 @@ implementation
 
         for (i = 0; i < MAX_NEIGHBORS; i++) {
             if(neighbors[i].state == ENTRY_FULL){
-                /*
+
                 rateSum += neighbors[i].skew*neighbors[i].multiplier;
                 rateSum += neighbors[i].multiplier;
-                rateSum += neighbors[i].skew;
-                */                
-                rateSum += neighbors[i].multiplier;
+                rateSum += neighbors[i].skew;               
+                
+                //rateSum += neighbors[i].multiplier;
             }
         }
 
