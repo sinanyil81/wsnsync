@@ -265,7 +265,6 @@ implementation
     	return numNeighbors;
     }
 
-	uint32_t ggg = 0;
     command error_t EgtspNeighborTable.storeInfo(uint16_t id,float multiplier,float rootMultiplier,uint32_t localTime,uint32_t globalTime,uint32_t timestamp){
 
         uint8_t found = 0;
@@ -281,7 +280,6 @@ implementation
         if (index >= 0) {
 
             if(checkEntry(index,timestamp,localTime) == SUCCESS){
-            	ggg = getNeighborGlobalTime(index,timestamp);
                 neighbors[index].state = ENTRY_FULL;
                 neighbors[index].id = id;
                 neighbors[index].timestamp = timestamp;
@@ -340,15 +338,6 @@ implementation
             	uint32_t nClock = getNeighborGlobalTime(i,timestamp);
                 diffSum += (int32_t) (nClock-clock) / (numNeighbors+1);
    	            diffSumRest += (nClock-clock) % (numNeighbors+1);
-   	            
-   	            /*
-   	            call DebugSerial.sendSerial(clock,
-   	            							ggg,
-   	            							neighbors[i].clock,
-   	            							0,   	            							
-   	            							neighbors[i].timestamp,
-   	            							0,
-   	            							0);*/
             }
         }
                 

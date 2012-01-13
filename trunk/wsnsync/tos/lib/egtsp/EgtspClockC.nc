@@ -5,6 +5,7 @@ module EgtspClockC
 implementation
 {
     uint32_t base;          // base of the logical clock
+    int32_t UTCOffset;
     float multiplier;       // rate multiplier of the logical clock
     float rootMultiplier;   // rate multiplier of the root node
     uint32_t lastUpdate;    // local time at which the base of the logical clock is updated
@@ -12,6 +13,7 @@ implementation
     command void EgtspClock.start(){
         atomic{
             base = 0;
+            UTCOffset = 0;
             lastUpdate = 0;
             multiplier = 0.0;
             rootMultiplier = 0.0;
@@ -25,6 +27,10 @@ implementation
     command void EgtspClock.setRootRate(float rate){
         atomic rootMultiplier = rate;
     }
+    
+    command void EgtspClock.setUTCOffset(int32_t offset){
+        atomic UTCOffset = offset;
+    }
 
     async command float EgtspClock.getRate(){
         return multiplier;
@@ -32,6 +38,10 @@ implementation
     
     async command float EgtspClock.getRootRate(){
         return rootMultiplier;
+    }
+    
+    async command int32_t EgtspClock.getUTCOffset(){
+        return UTCOffset;
     }
 
     command void EgtspClock.setValue(uint32_t value,uint32_t localTime){
