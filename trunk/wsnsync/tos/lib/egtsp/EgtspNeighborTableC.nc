@@ -30,12 +30,9 @@ implementation
     typedef struct NeighborEntry{
         uint8_t state;                      // is entry full or empty ?
         uint16_t id;                        // ID of the neighbor
+        uint32_t clock;						// logical clock of the neighbor
         float multiplier;                   // latest rate multiplier received
         float rootMultiplier;               // latest root multiplier received
-        uint32_t clock; 					// latest clock received
-        
-        uint32_t clock1; 					// latest clock received
-        uint32_t clock2; 					// latest clock received
 
         TableItem   table[MAX_ENTRIES];     // stores the timestamp pairs in order to calculate
                                             // the slope of the least-squares line
@@ -57,7 +54,7 @@ implementation
     	return estimate;
     }
     
-    uint32_t getNeighborGlobalTime(uint8_t index,uint32_t localTime){
+	uint32_t getNeighborGlobalTime(uint8_t index,uint32_t localTime){
 		uint32_t timePassed = localTime - neighbors[index].timestamp;
 		uint32_t retVal = neighbors[index].clock;
         
@@ -65,11 +62,9 @@ implementation
         r += neighbors[index].multiplier;
         r += neighbors[index].multiplier*neighbors[index].skew;
         r -= neighbors[index].rootMultiplier;
-        r /= (neighbors[index].rootMultiplier + 1.0); 
+        r /= (neighbors[index].rootMultiplier + 1.0);
         
-        retVal += timePassed + (int32_t)(r*(int32_t)(timePassed));
-        
-        // retVal += timePassed + (int32_t)(neighbors[index].rootMultiplier*(int32_t)(timePassed));    	    
+        retVal += timePassed + (int32_t)(r*(int32_t)(timePassed));    	    
     	
     	return retVal;
     }
@@ -216,7 +211,7 @@ implementation
             clearNeighbor(i);
         }
 
-        numNeighbors = 0;
+        atomic numNeighbors = 0;
     }
 
     int8_t getNeighborSlot(uint16_t id) {
@@ -270,6 +265,7 @@ implementation
     	return numNeighbors;
     }
 
+	uint32_t ggg = 0;
     command error_t EgtspNeighborTable.storeInfo(uint16_t id,float multiplier,float rootMultiplier,uint32_t localTime,uint32_t globalTime,uint32_t timestamp){
 
         uint8_t found = 0;
@@ -285,16 +281,13 @@ implementation
         if (index >= 0) {
 
             if(checkEntry(index,timestamp,localTime) == SUCCESS){
-                neighbors[index].clock1 = getNeighborGlobalTime(index,timestamp);
-                neighbors[index].clock2 = neighbors[index].clock;
-                
+            	ggg = getNeighborGlobalTime(index,timestamp);
                 neighbors[index].state = ENTRY_FULL;
                 neighbors[index].id = id;
                 neighbors[index].timestamp = timestamp;
                 neighbors[index].clock = globalTime;
-                        
                 neighbors[index].multiplier = multiplier;
-                neighbors[index].rootMultiplier = rootMultiplier;                
+                neighbors[index].rootMultiplier = rootMultiplier;
 
                 addNewEntry(neighbors[index].table,
                             &neighbors[index].tableEntries,
@@ -313,20 +306,6 @@ implementation
                     neighbors[index].localAverage = 0;
                     neighbors[index].offsetAverage = 0;
                 }
-                
-                /* calculate and set multipliers */
-                /* {
-                	float r = neighbors[index].skew;        
-        			r += multiplier;
-        			r += multiplier*neighbors[index].skew;
-        			
-        			neighbors[index].multiplier = r;
-        			
-        			r -= rootMultiplier;
-        			r /= (rootMultiplier + 1.0);
-        			neighbors[index].rootMultiplier = r;         			        		
-                } */
-                 
 
                 return SUCCESS;
             }
@@ -334,19 +313,16 @@ implementation
 
         return FAIL;        
     }
-
+    
     command void EgtspNeighborTable.getNeighborhoodRate(float *myRate){
     	float rateSum = *myRate;
         uint8_t i;
 
         for (i = 0; i < MAX_NEIGHBORS; i++) {
             if(neighbors[i].state == ENTRY_FULL){
-
                 rateSum += neighbors[i].skew*neighbors[i].multiplier;
                 rateSum += neighbors[i].multiplier;
-                rateSum += neighbors[i].skew;               
-                
-                //rateSum += neighbors[i].multiplier;
+                rateSum += neighbors[i].skew;  
             }
         }
 
@@ -354,7 +330,7 @@ implementation
         *myRate = rateSum;
     }
     
-    command void EgtspNeighborTable.getNeighborhoodOffset(int32_t *myOffset,uint32_t clock,uint32_t timestamp){
+    command uint32_t EgtspNeighborTable.getNeighborhoodOffset(uint32_t clock,uint32_t timestamp){
         uint8_t i;
 		int64_t diffSum = 0;
 		int32_t diffSumRest = 0;
@@ -366,15 +342,15 @@ implementation
    	            diffSumRest += (nClock-clock) % (numNeighbors+1);
    	            
    	            call DebugSerial.sendSerial(clock,
-   	            							neighbors[i].clock2,
-   	            							neighbors[i].clock1,
+   	            							ggg,
    	            							neighbors[i].clock,
+   	            							0,   	            							
    	            							neighbors[i].timestamp,
-   	            							timestamp,
-   	            							*myOffset);
+   	            							0,
+   	            							0);
             }
         }
                 
-        *myOffset += diffSum + diffSumRest/(numNeighbors+1);              
+        return diffSum + diffSumRest/(numNeighbors+1);              
    }
 }
