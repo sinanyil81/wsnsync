@@ -122,6 +122,7 @@ implementation
     {
 		uint32_t mult,rootMult;
 		uint32_t time,offset;
+		int32_t clockError;
         float rate;
         error_t status;
         
@@ -135,6 +136,8 @@ implementation
                                             	  msg->localTime,
                                                   msg->globalTime,
                                                   processedMsgEventTime);
+                                                  
+        call EgtspNeighborTable.update(processedMsgEventTime);
 
         rate = call EgtspClock.getRate();
         call EgtspNeighborTable.getNeighborhoodRate(&rate);        
@@ -144,8 +147,11 @@ implementation
         	call EgtspClock.setRootRate(rate);
         }  
         
-		time = msg->globalTime;           
-        call EgtspNeighborTable.getNeighborhoodOffset(time,processedMsgEventTime);
+        /* calculate new offset */
+		time = processedMsgEventTime;
+		call EgtspClock.getValue(&time);		           
+        offset = call EgtspNeighborTable.getNeighborhoodOffset(time,processedMsgEventTime);
+        call EgtspClock.setValue(time + offset,processedMsgEventTime);
         
         if( (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
@@ -154,7 +160,14 @@ implementation
             goto exit;       
 
         if( status == SUCCESS ){
-            call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
+        	time = processedMsgEventTime;
+			call EgtspClock.getValue(&time);
+			clockError = (int32_t)(time - msg->globalTime);
+			
+			/* TODO birkac boyle mesaj almamiz lazim */
+			if((clockError > CLOCK_ERROR_LIMIT) || (clockError < -CLOCK_ERROR_LIMIT)){
+				call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
+			}						        	           
             
             mult = msg->rootMultiplier;
             call EgtspClock.setRootRate(*((float *)&mult));

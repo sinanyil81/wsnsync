@@ -341,13 +341,14 @@ implementation
                 diffSum += (int32_t) (nClock-clock) / (numNeighbors+1);
    	            diffSumRest += (nClock-clock) % (numNeighbors+1);
    	            
+   	            /*
    	            call DebugSerial.sendSerial(clock,
    	            							ggg,
    	            							neighbors[i].clock,
    	            							0,   	            							
    	            							neighbors[i].timestamp,
    	            							0,
-   	            							0);
+   	            							0);*/
             }
         }
                 
