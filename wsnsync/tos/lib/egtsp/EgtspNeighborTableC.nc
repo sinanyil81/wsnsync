@@ -334,10 +334,12 @@ implementation
 		int32_t diffSumRest = 0;
 
         for (i = 0; i < MAX_NEIGHBORS; i++) {
-            if(neighbors[i].state == ENTRY_FULL){            	            	 
-            	uint32_t nClock = getNeighborGlobalTime(i,timestamp);
-                diffSum += (int32_t) (nClock-clock) / (numNeighbors+1);
-   	            diffSumRest += (nClock-clock) % (numNeighbors+1);
+            if(neighbors[i].state == ENTRY_FULL){
+            	uint32_t diff = getNeighborGlobalTime(i,timestamp) - clock;            	
+            	if( (((int32_t)diff) < ENTRY_THROWOUT_LIMIT) && (((int32_t)diff) > -ENTRY_THROWOUT_LIMIT) ){
+            		diffSum += (int32_t) diff / (numNeighbors+1);
+   	            	diffSumRest += diff % (numNeighbors+1);
+   	            }
             }
         }
                 
