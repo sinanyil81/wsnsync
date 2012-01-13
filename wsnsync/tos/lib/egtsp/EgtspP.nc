@@ -84,26 +84,15 @@ implementation
 
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
-        //if(TOS_NODE_ID != ROOT_ID){
-	   		call EgtspClock.getValue(time);
-	   	//}    	
+		call EgtspClock.getValue(time);    	
 	   	
 	   	return is_synced();
     }
     
     async command error_t GlobalTime.local2GlobalUTC(uint32_t *time)
-    {
-    	int32_t offset;
-    	
-    	call GlobalTime.local2Global(time);
-    	//call EgtspClock.getUTCOffset(&offset);
-    	    	   	        
-        *time -= offset;
-        
-        //call EgtspClock.getOffset(&offset); 
-        *time = offset;
-        
-        //*time = call EgtspNeighborTable.getNumNeighbors();
+    {    	
+    	call GlobalTime.local2Global(time);    	    	   	        
+        *time += call EgtspClock.getUTCOffset();
         
         return is_synced();
     }
@@ -171,6 +160,8 @@ implementation
             
             mult = msg->rootMultiplier;
             call EgtspClock.setRootRate(*((float *)&mult));
+            
+            call EgtspClock.setUTCOffset(msg->rootOffset);
             
             call Leds.led1Toggle();
         }
@@ -240,10 +231,10 @@ implementation
         
         if(TOS_NODE_ID == ROOT_ID){
         	offset = globalTime - localTime;
-        	//call EgtspClock.setUTCOffset(offset);
+        	call EgtspClock.setUTCOffset(offset);
         }
         else{
-        	//call EgtspClock.getUTCOffset(&offset);
+        	offset = call EgtspClock.getUTCOffset();
         }
         
         outgoingMsg->rootOffset = offset;
