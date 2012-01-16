@@ -2,7 +2,6 @@ module EgtspNeighborTableC
 {
     provides interface EgtspNeighborTable;   
     uses interface Leds;
-    uses interface DebugSerial;
 }
 implementation
 {
