@@ -8,8 +8,8 @@ CFLAGS += -DTIMESYNC_LEDS
 PFLAGS += -I../../../tos/lib/nosleep/
 
 #enable protocol
-#PFLAGS += -I../../../tos/lib/egtsp/
-PFLAGS += -I../../../tos/lib/debugging/
+PFLAGS += -I../../../tos/lib/egtsp/
+#PFLAGS += -I../../../tos/lib/debugging/
 
 #enable cc2420x
 PFLAGS += -I../../../tos/platforms/micaz/
