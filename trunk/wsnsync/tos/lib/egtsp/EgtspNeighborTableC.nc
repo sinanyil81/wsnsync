@@ -247,7 +247,7 @@ implementation
         
         numNeighbors = 0;
 		
-        for (i = 0; i < MAX_NEIGHBORS; ++i) {            
+        /* for (i = 0; i < MAX_NEIGHBORS; ++i) {            
             if (neighbors[i].state == ENTRY_FULL){
             	age = time - neighbors[i].timestamp;
             	if (age >= (NEIGHBOR_TIMEOUT*1000000L) ){
@@ -257,7 +257,13 @@ implementation
             		numNeighbors++;
             	}
             }           
-        }                
+        }*/                
+        
+        for (i = 0; i < MAX_NEIGHBORS; ++i) {            
+            if (neighbors[i].state == ENTRY_FULL){
+                 numNeighbors++;
+            }           
+        }
     }
     
     command uint32_t EgtspNeighborTable.getNumNeighbors(){
