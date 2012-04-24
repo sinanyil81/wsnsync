@@ -12,8 +12,8 @@ PFLAGS += -I../../../tos/lib/egtsp/
 #PFLAGS += -I../../../tos/lib/debugging/
 
 #enable cc2420x
-PFLAGS += -I../../../tos/platforms/micaz/
-CFLAGS +=-I../../../tos/platforms/micaz/CC2420X
+#PFLAGS += -I../../../tos/platforms/micaz/
+#CFLAGS +=-I../../../tos/platforms/micaz/CC2420X
 
 #BUILD_EXTRA_DEPS = TSyncAppMsg.class SerialMsg.class
 BUILD_EXTRA_DEPS = TSyncAppMsg.class
