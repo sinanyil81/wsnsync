@@ -31,10 +31,14 @@
  *
  * @author: Miklos Maroti, Brano Kusy (kusy@isis.vanderbilt.edu), Janos Sallai
  * Ported to T2: 3/17/08 by Brano Kusy (branislav.kusy@gmail.com)
+ *
+ * Modified by K. Sinan YILDIRIM (sinanyil81@gmail.com) in order to implement 
+ * PulseSync algorithm with a fixed reference node by using pairwise slope
+ * with minimum variance.
  */
 #include "TimeSyncMsg.h"
 
-generic module TimeSyncP(typedef precision_tag)
+generic module TimeSyncPSMVP(typedef precision_tag)
 {
     provides
     {

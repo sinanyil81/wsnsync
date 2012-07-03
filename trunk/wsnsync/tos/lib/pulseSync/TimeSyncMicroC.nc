@@ -22,6 +22,7 @@ implementation
 #endif
 
   components new TimeSyncP(TMicro) as TimeSyncP;
+  //components new TimeSyncP(TMicro) as TimeSyncPSMVP;
 
   GlobalTime      =   TimeSyncP;
   StdControl      =   TimeSyncP;
