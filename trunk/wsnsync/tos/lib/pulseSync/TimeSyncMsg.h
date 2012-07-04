@@ -54,6 +54,7 @@ typedef nx_struct TimeSyncMsg
 	* receiving clock when the remote globalTime was taken.
 	*/
 	nx_uint32_t	globalTime;
+	nx_uint32_t	globalTimePSMV;
 
 	//just for convenience
 	nx_uint32_t 	localTime;
