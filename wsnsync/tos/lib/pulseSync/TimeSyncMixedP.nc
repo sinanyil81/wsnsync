@@ -98,7 +98,7 @@ implementation
     TableItem   table[MAX_ENTRIES];
     uint8_t tableEntries;     
     
-    /* PSMV */
+    /* for PSMV */
     TableItem   tablePSMV[MAX_ENTRIES];
     uint8_t tableEntriesPSMV;
     int8_t tableEndPSMV;          
@@ -127,6 +127,7 @@ implementation
     int32_t     offsetAverage;
     uint8_t     numEntries; // the number of full entries in the table
     
+    /* for PSMV */
     float       skewPSMV;
     uint32_t    localAveragePSMV;
     int32_t     offsetAveragePSMV;
@@ -164,6 +165,7 @@ implementation
         return is_synced();
     }
     
+    /* for PSMV */
     async command error_t GlobalTime.local2GlobalPSMV(uint32_t *time)
     {
         *time += offsetAveragePSMV + (int32_t)(skewPSMV * (int32_t)(*time - localAveragePSMV));
@@ -243,6 +245,7 @@ implementation
         }
     }   
     
+    /* for PSMV */
     void calculateConversionPSMV()
     {
        float newSkew = skewPSMV;
@@ -288,8 +291,8 @@ implementation
         newOffsetAverage += offsetSum + offsetAverageRest / tableEntriesPSMV;
 		
 		{
-        	int32_t a = (int32_t)(tablePSMV[tableEntries-1].timeOffset - tablePSMV[0].timeOffset);
-        	int32_t b = (int32_t)(tablePSMV[tableEntries-1].localTime  - tablePSMV[0].localTime);
+        	int32_t a = (int32_t)(tablePSMV[tableEntriesPSMV-1].timeOffset - tablePSMV[0].timeOffset);
+        	int32_t b = (int32_t)(tablePSMV[tableEntriesPSMV-1].localTime  - tablePSMV[0].localTime);
         
         	if( b != 0 ){
           		newSkew = (float)a/(float)b;
@@ -301,7 +304,7 @@ implementation
             skewPSMV = newSkew;
             offsetAveragePSMV = newOffsetAverage;
             localAveragePSMV = newLocalAverage;
-            numEntriesPSMV = tableEntries;
+            numEntriesPSMV = tableEntriesPSMV;
         }
     }   
     
@@ -315,6 +318,7 @@ implementation
         atomic numEntries = 0;
     }
     
+    /* for PSMV */
     void clearTablePSMV()
     {
         int8_t i;
@@ -377,6 +381,7 @@ implementation
         table[freeItem].timeOffset = msg->globalTime - msg->localTime;
     }
     
+    /* for PSMV */
     uint8_t numErrorsPSMV=0;    
     void addNewEntryPSMV(TimeSyncMsg *msg)
     {
@@ -417,14 +422,14 @@ implementation
     {
         uint32_t localTime, globalTime,globalTimePSMV;
 
-        globalTime = localTime = call GlobalTime.getLocalTime();
-        call GlobalTime.local2Global(&globalTime);
+        globalTimePSMV = globalTime = localTime = call GlobalTime.getLocalTime();
         
-        globalTimePSMV = localTime = call GlobalTime.getLocalTime();
+        call GlobalTime.local2Global(&globalTime);        
         call GlobalTime.local2GlobalPSMV(&globalTimePSMV);
 
        outgoingMsg->globalTime = globalTime;
        outgoingMsg->globalTimePSMV = globalTimePSMV;
+       
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
 #endif
@@ -570,9 +575,14 @@ implementation
             skew = 0.0;
             localAverage = 0;
             offsetAverage = 0;
+            
+            skewPSMV = 0.0;
+            localAveragePSMV = 0;
+            offsetAveragePSMV = 0;
         };
 
         clearTable();
+        clearTablePSMV();
 
         atomic outgoingMsg = (TimeSyncMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(TimeSyncMsg));
         outgoingMsg->rootID = ROOT_ID;
