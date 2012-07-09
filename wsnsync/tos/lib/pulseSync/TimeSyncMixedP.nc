@@ -138,6 +138,10 @@ implementation
 
     message_t outgoingMsgBuffer;
     TimeSyncMsg* outgoingMsg;
+    
+    uint32_t pulse;
+    uint32_t pulsePSMV;
+    uint32_t pulseTime;      
 
     async command uint32_t GlobalTime.getLocalTime()
     {
@@ -424,8 +428,15 @@ implementation
 
         globalTimePSMV = globalTime = localTime = call GlobalTime.getLocalTime();
         
-        call GlobalTime.local2Global(&globalTime);        
-        call GlobalTime.local2GlobalPSMV(&globalTimePSMV);
+        if( ROOT_ID != TOS_NODE_ID ){
+        	int32_t elapsed = localTime - pulseTime;         
+        	
+        	globalTime =  pulse + elapsed +  (int32_t)(skew * (int32_t)(elapsed));
+			globalTimePSMV =  pulsePSMV + elapsed +  (int32_t)(skewPSMV * (int32_t)(elapsed));
+        }
+        
+        //call GlobalTime.local2Global(&globalTime);        
+        //call GlobalTime.local2GlobalPSMV(&globalTimePSMV);
 
        outgoingMsg->globalTime = globalTime;
        outgoingMsg->globalTimePSMV = globalTimePSMV;
@@ -467,6 +478,10 @@ implementation
 
         if( ROOT_ID == msg->rootID && (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
+            
+            pulse = msg->globalTime;           
+            pulsePSMV = msg->globalTimePSMV;
+            pulseTime = msg->localTime;
         }
         else
             goto exit;
