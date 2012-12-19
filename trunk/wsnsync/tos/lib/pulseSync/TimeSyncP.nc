@@ -362,8 +362,24 @@ implementation
       uint16_t incomingID = (uint8_t)((TimeSyncMsg*)payload)->nodeID;
       int16_t diff = (incomingID - TOS_NODE_ID);
       /* LINE topology */
-     if( diff < -1 || diff > 1 )
-       return msg;
+      if(diff < -1 || diff > 1 )
+      	return msg;
+  
+  	  /* 5X4 GRID topology */
+//  	  if(TOS_NODE_ID % 4 == 1) {
+//  	  	if(!(diff == 1 || diff == -4 || diff == 4 )){
+//  	  		return msg;
+//  	  	}
+//  	  }
+//  	  else if (TOS_NODE_ID % 4 == 0) {
+//  	  	if(!(diff == -1 || diff == -4 || diff == 4 )){
+//  	  		return msg;
+//  	  	}
+//  	  }
+//  	  else if(!(diff == -1 || diff == 1 || diff == -4 || diff == 4 )){
+//      	return msg;
+//      }
+  
         /* RING of 18 sensor nodes */
 //         if(TOS_NODE_ID == 1){
 //             if( incomingID !=18 && incomingID!=2)
