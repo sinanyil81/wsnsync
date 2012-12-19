@@ -46,7 +46,7 @@ interface TimeSyncInfo
 	 * representation precision.
 	 */
 	async command float getSkew();
-	async command float getSkewPSMV();
+//	async command float getSkewPSMV();
 
 	/**
 	 * Returns the local time of the last synchronization point. This 
