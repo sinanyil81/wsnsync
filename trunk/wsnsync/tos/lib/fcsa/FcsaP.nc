@@ -139,6 +139,21 @@ implementation
         /* LINE topology */
         if( diff < -1 || diff > 1 )
             return msg;
+            
+		/* 5X4 GRID topology */
+//		if(TOS_NODE_ID % 4 == 1) {
+//	  	  	if(!(diff == 1 || diff == -4 || diff == 4 )){
+//	  	  		return msg;
+//	  	  	}
+//	  	}
+//	  	else if (TOS_NODE_ID % 4 == 0) {
+//	  		if(!(diff == -1 || diff == -4 || diff == 4 )){
+//	  	 		return msg;
+//	  	  	}
+//	  	}
+//	  	else if(!(diff == -1 || diff == 1 || diff == -4 || diff == 4 )){
+//	      	return msg;
+//	    }
         /* TODO */
 
         if( (state & STATE_PROCESSING) == 0 && call TimeSyncPacket.isValid(msg)) {
