@@ -1,6 +1,6 @@
-module SelfClockC
+module LogicalClockC
 {
-    provides interface SelfClock;
+    provides interface LogicalClock;
 }
 implementation
 {
@@ -9,7 +9,7 @@ implementation
     float multiplier;
     uint32_t lastUpdate;
 
-    command void SelfClock.start(){
+    command void LogicalClock.start(){
         atomic{
 		    value = 0;
 		    offset = 0;
@@ -17,20 +17,24 @@ implementation
 		    lastUpdate = 0;            
         }
     }
+    
+    async command float LogicalClock.getRate(){
+        return multiplier;
+    }
 
-    command void SelfClock.setRate(float rate){
+    command void LogicalClock.setRate(float rate){
         atomic multiplier = rate;
     }
     
-    command int32_t SelfClock.getOffset(){
+    command int32_t LogicalClock.getOffset(){
     	return offset;
     }
     
-	command void SelfClock.setOffset(int32_t val){
+	command void LogicalClock.setOffset(int32_t val){
     	atomic offset = val;
     }
     
-    command void SelfClock.setValue(uint32_t val,uint32_t localTime){
+    command void LogicalClock.setValue(uint32_t val,uint32_t localTime){
         atomic{
             value = val;
             offset = 0;
@@ -38,7 +42,7 @@ implementation
         }
     }
     
-    command void SelfClock.update(uint32_t time){
+    command void LogicalClock.update(uint32_t time){
     
         uint32_t timePassed = time - lastUpdate;       
         uint32_t val = value + timePassed + (int32_t)(multiplier*(int32_t)(timePassed));
@@ -49,7 +53,7 @@ implementation
         }      
     }
 
-    async command void SelfClock.getValue(uint32_t *time){
+    async command void LogicalClock.getValue(uint32_t *time){
     
         uint32_t timePassed = *time - lastUpdate;
                

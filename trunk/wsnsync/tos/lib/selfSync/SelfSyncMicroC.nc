@@ -1,16 +1,12 @@
-#include "EgtspMsg.h"
+#include "SelfMsg.h"
 
-configuration EgtspMicroC
+configuration SelfSyncMicroC
 {
   uses interface Boot;
   provides interface Init;
   provides interface StdControl;
   provides interface GlobalTime<TMicro>;
-
-  //interfaces for extra fcionality: need not to be wired
   provides interface TimeSyncInfo;
-  provides interface TimeSyncMode;
-  provides interface TimeSyncNotify;
 }
 
 implementation
@@ -21,20 +17,18 @@ implementation
 #error "LPL timesync is not available for your platform"
 #endif
 
-  components new EgtspP(TMicro) as TimeSyncP;
+  components new SelfSyncP(TMicro) as TimeSyncP;
 
   GlobalTime      =   TimeSyncP;
   StdControl      =   TimeSyncP;
   Init            =   TimeSyncP;
   Boot            =   TimeSyncP;
   TimeSyncInfo    =   TimeSyncP;
-  TimeSyncMode    =   TimeSyncP;
-  TimeSyncNotify  =   TimeSyncP;
 
   components TimeSyncMessageC as ActiveMessageC;
   TimeSyncP.RadioControl    ->  ActiveMessageC;
-  TimeSyncP.Send            ->  ActiveMessageC.TimeSyncAMSendRadio[TIMESYNC_AM_EGTSP];
-  TimeSyncP.Receive         ->  ActiveMessageC.Receive[TIMESYNC_AM_EGTSP];
+  TimeSyncP.Send            ->  ActiveMessageC.TimeSyncAMSendRadio[TIMESYNC_AM_SELFSYNC];
+  TimeSyncP.Receive         ->  ActiveMessageC.Receive[TIMESYNC_AM_SELFSYNC];
   TimeSyncP.TimeSyncPacket  ->  ActiveMessageC;
 
   components LocalTimeMicroC;
@@ -46,11 +40,11 @@ implementation
   components RandomC;
   TimeSyncP.Random -> RandomC;
 
-  components EgtspNeighborTableC;  
-  TimeSyncP.EgtspNeighborTable -> EgtspNeighborTableC;
+  components AvtC;  
+  TimeSyncP.Avt -> AvtC;
 
-  components EgtspClockC;
-  TimeSyncP.EgtspClock -> EgtspClockC;
+  components LogicalClockC;
+  TimeSyncP.LogicalClock -> LogicalClockC;
   
 #if defined(TIMESYNC_LEDS)
   components LedsC;
@@ -58,8 +52,6 @@ implementation
   components NoLedsC as LedsC;
 #endif
   TimeSyncP.Leds  ->  LedsC;
-  
-  EgtspNeighborTableC.Leds -> LedsC;
   
 #ifdef LOW_POWER_LISTENING
   TimeSyncP.LowPowerListening -> ActiveMessageC;
