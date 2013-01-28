@@ -1,17 +1,12 @@
-#include "EgtspMsg.h"
+#include "SelfMsg.h"
 
-generic module EgtspP(typedef precision_tag)
+generic module SelfSyncP(typedef precision_tag)
 {
     provides
     {
         interface Init;
         interface StdControl;
         interface GlobalTime<precision_tag>;
-
-        //interfaces for extra functionality: need not to be wired
-        interface TimeSyncInfo;
-        interface TimeSyncMode;
-        interface TimeSyncNotify;
     }
     uses
     {
@@ -24,8 +19,9 @@ generic module EgtspP(typedef precision_tag)
         interface Leds;
         interface TimeSyncPacket<precision_tag,uint32_t>;
         interface LocalTime<precision_tag> as LocalTime;
-        interface EgtspNeighborTable;
-        interface EgtspClock;        
+        
+        interface SelfClock;
+        interface Avt;        
 
 #ifdef LOW_POWER_LISTENING
         interface LowPowerListening;
@@ -38,9 +34,11 @@ implementation
 #define TIMESYNC_RATE   10
 #endif
 
+	#define MAX_PPM 0.0001
+	#define MIN_PPM -0.0001
+
     enum {
-        BEACON_RATE  = TIMESYNC_RATE,  // how often send the beacon msg (in seconds)
-        CLOCK_ERROR_LIMIT = 1000
+        BEACON_RATE  = 30,  // how often send the beacon msg (in seconds)       
     };
 
     enum {
@@ -57,7 +55,7 @@ implementation
     message_t* processedMsg;    
 
     message_t outgoingMsgBuffer;
-    EgtspMsg* outgoingMsg;
+    SelfMsg* outgoingMsg;
 
     uint32_t processedMsgEventTime;
 
@@ -74,17 +72,15 @@ implementation
 
     error_t is_synced()
     {
-//       if (numEntries>=ENTRY_VALID_LIMIT || outgoingMsg->rootID==TOS_NODE_ID)
-//         return SUCCESS;
-//       else
-//         return FAIL;
-      return SUCCESS;
+		/* TODO */
+		
+      	return SUCCESS;
     }
 
 
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
-		call EgtspClock.getValue(time);    	
+		call SelfClock.getValue(time);    	
 	   	
 	   	return is_synced();
     }
@@ -92,7 +88,7 @@ implementation
     async command error_t GlobalTime.local2GlobalUTC(uint32_t *time)
     {    	
     	call GlobalTime.local2Global(time);    	    	   	        
-        *time += call EgtspClock.getUTCOffset();
+        *time += call SelfClock.getUTCOffset();
         
         return is_synced();
     }
@@ -109,64 +105,33 @@ implementation
 
     void task processMsg()
     {
-		uint32_t mult,rootMult;
-		uint32_t time,offset;
-		int32_t clockError;
-        float rate;
-        error_t status;
+		uint32_t myClock,myOffset;
+		int32_t skew;         
         
-        EgtspMsg* msg = (EgtspMsg*)(call Send.getPayload(processedMsg, sizeof(EgtspMsg)));
+        SelfMsg* msg = (SelfMsg*)(call Send.getPayload(processedMsg, sizeof(SelfMsg)));
+        call SelfClock.update(processedMsgEventTime);
+        
+		call SelfClock.getValue(&myClock);
+		myOffset = call SelfClock.getOffset();
+		
+		int32_t skew = myClock - msg->globalTime;
+		int32_t threshold = (int32_t)((MAX_PPM - MIN_PPM)*1000000.0*(double)BEACON_RATE); 
 
-        mult = msg->multiplier;
-        rootMult = msg->rootMultiplier;
-        status = call EgtspNeighborTable.storeInfo(msg->nodeID,
-                                        	      *((float *)&mult),
-                                        	      *((float *)&rootMult),
-                                            	  msg->localTime,
-                                                  msg->globalTime,
-                                                  processedMsgEventTime);
-                                                  
-        call EgtspNeighborTable.update(processedMsgEventTime);
-
-        rate = call EgtspClock.getRate();
-        call EgtspNeighborTable.getNeighborhoodRate(&rate);        
-        call EgtspClock.setRate(rate);      
-        
-        if(TOS_NODE_ID == ROOT_ID){        
-        	call EgtspClock.setRootRate(rate);
-        }  
-        
-        /* calculate new offset */
-		time = processedMsgEventTime;
-		call EgtspClock.getValue(&time);		           
-        offset = call EgtspNeighborTable.getNeighborhoodOffset(time,processedMsgEventTime);
-        call EgtspClock.setValue(time + offset,processedMsgEventTime);
-        
-        if( (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
-            outgoingMsg->seqNum = msg->seqNum;
-        }
-        else
-            goto exit;       
-
-        if( status == SUCCESS ){
-        	time = processedMsgEventTime;
-			call EgtspClock.getValue(&time);
-			clockError = (int32_t)(time - msg->globalTime);
-			
-			/* TODO birkac boyle mesaj almamiz lazim */
-			if((clockError > CLOCK_ERROR_LIMIT) || (clockError < -CLOCK_ERROR_LIMIT)){
-				call EgtspClock.setValue(msg->globalTime,processedMsgEventTime);
-			}						        	           
-            
-            mult = msg->rootMultiplier;
-            call EgtspClock.setRootRate(*((float *)&mult));
-            
-            call EgtspClock.setUTCOffset(msg->rootOffset);
-            
-            call Leds.led1Toggle();
-        }
-      
-        signal TimeSyncNotify.msg_received();
+		if (skew < -threshold) {
+			call SelfClock.setOffset(myOffset-skew);
+		} else if (skew > threshold) {
+			// do nothing
+		} else if (skew > TOLERANCE) {
+			call Avt.adjustValue(FEEDBACK_LOWER);
+			call SelfClock.setRate(call Avt.getValue());
+		} else if (skew < (-1.0) * TOLERANCE) {
+			call Avt.adjustValue(FEEDBACK_GREATER);
+			call SelfClock.setRate(call Avt.getValue());
+			call SelfClock.setOffset(myOffset-skew);
+		} else {
+			call Avt.adjustValue(FEEDBACK_GOOD);
+			call SelfClock.setRate(call Avt.getValue());
+		}        
 
     exit:
         state &= ~STATE_PROCESSING;
@@ -195,6 +160,21 @@ implementation
 //        else if( diff < -1 || diff > 1 )
 //        	return msg;
 
+  	  	/* 5X4 GRID topology */
+//  	  if(TOS_NODE_ID % 4 == 1) {
+//  	  	if(!(diff == 1 || diff == -4 || diff == 4 )){
+//  	  		return msg;
+//  	  	}
+//  	  }
+//  	  else if (TOS_NODE_ID % 4 == 0) {
+//  	  	if(!(diff == -1 || diff == -4 || diff == 4 )){
+//  	  		return msg;
+//  	  	}
+//  	  }
+//  	  else if(!(diff == -1 || diff == 1 || diff == -4 || diff == 4 )){
+//      	return msg;
+//      }
+
         if( (state & STATE_PROCESSING) == 0 && call TimeSyncPacket.isValid(msg)) {
             message_t* old = processedMsg;
 
@@ -212,39 +192,19 @@ implementation
 
     task void sendMsg()
     {
-        uint32_t localTime, globalTime,offset;
-        float multiplier;
+        uint32_t localTime, globalTime;
 
         globalTime = localTime = call GlobalTime.getLocalTime();                    	
         call GlobalTime.local2Global(&globalTime);
                         
-        multiplier = call EgtspClock.getRate();
-        outgoingMsg->multiplier = *((uint32_t*)(&multiplier));
-        
-        if(TOS_NODE_ID != ROOT_ID){
-        	multiplier = call EgtspClock.getRootRate();
-    	}    	                  	
-        outgoingMsg->rootMultiplier = *((uint32_t*)(&multiplier));
-               
-        outgoingMsg->localTime = localTime;
         outgoingMsg->globalTime = globalTime;
         
-        if(TOS_NODE_ID == ROOT_ID){
-        	offset = globalTime - localTime;
-        	call EgtspClock.setUTCOffset(offset);
-        }
-        else{
-        	offset = call EgtspClock.getUTCOffset();
-        }
-        
-        outgoingMsg->rootOffset = offset;
         
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
 #endif
-         if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, EGTSPMSG_LEN, localTime ) != SUCCESS ){
+         if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, SELFMSG_LEN, localTime ) != SUCCESS ){
             state &= ~STATE_SENDING;
-            signal TimeSyncNotify.msg_sent();
         }
     }
 
@@ -255,14 +215,10 @@ implementation
 
         if(error == SUCCESS)
         {         
-            if( TOS_NODE_ID == ROOT_ID ){
-                outgoingMsg->seqNum++;
-                call Leds.led2Toggle();
-            }   
+
         }       
 
         state &= ~STATE_SENDING;
-        signal TimeSyncNotify.msg_sent();
     }
 
     void timeSyncMsgSend()
@@ -308,13 +264,15 @@ implementation
     command error_t Init.init()
     {   
         
-        call EgtspNeighborTable.reset();
-        call EgtspClock.start();        
+        /* init logical clock */ 
+        call SelfClock.start();  
+        
+        /* init adaptive value tracker */      
+        call Avt.init(MIN_PPM,MAX_PPM,0); 
 
-        atomic outgoingMsg = (EgtspMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(EgtspMsg));
+        atomic outgoingMsg = (SelfMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(SelfMsg));
 
         outgoingMsg->nodeID = TOS_NODE_ID;
-        outgoingMsg->seqNum = 0;
 
         if(TOS_NODE_ID == ROOT_ID)
             call Leds.led0On();
@@ -343,17 +301,7 @@ implementation
         call Timer.stop();
         return SUCCESS;
     }
-
-    async command float TimeSyncInfo.getSkew() {
-    	return call EgtspClock.getRate();
-    }
     
-    async command uint16_t  TimeSyncInfo.getRootID() { return ROOT_ID; }
-    async command uint8_t   TimeSyncInfo.getSeqNum() { return outgoingMsg->seqNum; }
-
-    default event void TimeSyncNotify.msg_received(){}
-    default event void TimeSyncNotify.msg_sent(){}
-
     event void RadioControl.startDone(error_t error){}
     event void RadioControl.stopDone(error_t error){}
 }

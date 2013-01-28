@@ -4,8 +4,8 @@
 
 enum {
     FEEDBACK_GREATER = 0,
-    FEEDBACK_LOWER,
-    FEEDBACK_GOOD,
+    FEEDBACK_LOWER = 1,
+    FEEDBACK_GOOD = 2,
 };
 
 #endif

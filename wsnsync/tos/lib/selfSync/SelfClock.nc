@@ -1,22 +1,16 @@
-interface EgtspClock
+interface SelfClock
 {
     command void start();
     
     command void setRate(float multiplier);
     
-    command void setRootRate(float multiplier);
+    command int32_t getOffset();
     
-    command void setUTCOffset(int32_t offset); 
+	command void setOffset(int32_t value);
+       
+    command void setValue(uint32_t value,uint32_t localTime);
     
-    command void setValue(uint32_t value,uint32_t localTime);    
-    
-    async command float getRate();
-    
-    async command float getRootRate();
-    
-    async command int32_t getUTCOffset();
-    
-    async command void getValue(uint32_t *time);
-    
-    command void update(uint32_t localTime);
+    command void update(uint32_t localTime);    
+        
+    async command void getValue(uint32_t *time);       
 }
