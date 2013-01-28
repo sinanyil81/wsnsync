@@ -1,6 +1,6 @@
 #include "Avt.h"
 
-module AvtP
+module AvtC
 {
     provides
     {
@@ -29,7 +29,7 @@ implementation
 		/* delta bounds */
 		deltaMin = 0.0000000001;
 		deltaMax = 0.0001;
-		delta = (dMin + dMax)/2.0;
+		delta = (deltaMin + deltaMax)/2.0;
     }
     
     command float Avt.getValue(){
@@ -38,7 +38,7 @@ implementation
     }
     
     void increaseDelta(){
-    	delta = delta * INCREASE_FACTOR;    
+    	delta *= INCREASE_FACTOR;    
     	
     	if(delta > deltaMax){
     		delta = deltaMax;
@@ -46,7 +46,7 @@ implementation
     }
     
     void decreaseDelta(){
-    	delta = delta / DECREASE_FACTOR;
+    	delta /= DECREASE_FACTOR;
     	
     	if(delta < deltaMin){
     		delta = deltaMin;
@@ -81,7 +81,7 @@ implementation
     	return b;
     }
     
-    command void Avt.adjustValue(uint8_t feedback);
+    command void Avt.adjustValue(uint8_t feedback)
     {    	
     	// 1 - Updates the delta value
 		updateDelta(feedback);

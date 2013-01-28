@@ -1,4 +1,5 @@
 #include "SelfMsg.h"
+#include "Avt.h"
 
 generic module SelfSyncP(typedef precision_tag)
 {
@@ -7,6 +8,9 @@ generic module SelfSyncP(typedef precision_tag)
         interface Init;
         interface StdControl;
         interface GlobalTime<precision_tag>;
+        
+        /* extra functionality */
+        interface TimeSyncInfo;        
     }
     uses
     {
@@ -20,7 +24,7 @@ generic module SelfSyncP(typedef precision_tag)
         interface TimeSyncPacket<precision_tag,uint32_t>;
         interface LocalTime<precision_tag> as LocalTime;
         
-        interface SelfClock;
+        interface LogicalClock;
         interface Avt;        
 
 #ifdef LOW_POWER_LISTENING
@@ -36,6 +40,7 @@ implementation
 
 	#define MAX_PPM 0.0001
 	#define MIN_PPM -0.0001
+	#define TOLERANCE 1
 
     enum {
         BEACON_RATE  = 30,  // how often send the beacon msg (in seconds)       
@@ -80,17 +85,9 @@ implementation
 
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
-		call SelfClock.getValue(time);    	
-	   	
+		call LogicalClock.getValue(time);    
+		   	
 	   	return is_synced();
-    }
-    
-    async command error_t GlobalTime.local2GlobalUTC(uint32_t *time)
-    {    	
-    	call GlobalTime.local2Global(time);    	    	   	        
-        *time += call SelfClock.getUTCOffset();
-        
-        return is_synced();
     }
 
 	/**
@@ -106,41 +103,50 @@ implementation
     void task processMsg()
     {
 		uint32_t myClock,myOffset;
-		int32_t skew;         
+		int32_t skew,threshold;         
         
         SelfMsg* msg = (SelfMsg*)(call Send.getPayload(processedMsg, sizeof(SelfMsg)));
-        call SelfClock.update(processedMsgEventTime);
+        call LogicalClock.update(processedMsgEventTime);
         
-		call SelfClock.getValue(&myClock);
-		myOffset = call SelfClock.getOffset();
+        myClock = processedMsgEventTime;
+        
+		call LogicalClock.getValue(&myClock);
+		myOffset = call LogicalClock.getOffset();
 		
-		int32_t skew = myClock - msg->globalTime;
-		int32_t threshold = (int32_t)((MAX_PPM - MIN_PPM)*1000000.0*(double)BEACON_RATE); 
+		skew = myClock - msg->globalTime;
+		threshold = (int32_t)((MAX_PPM - MIN_PPM)*1000000.0*(double)BEACON_RATE); 
+		
+		if(skew < -threshold*3){
+			call LogicalClock.setValue(msg->globalTime,processedMsgEventTime);
+			goto exit;
+		}		
 
 		if (skew < -threshold) {
-			call SelfClock.setOffset(myOffset-skew);
+			call LogicalClock.setOffset(myOffset-skew);
 		} else if (skew > threshold) {
 			// do nothing
 		} else if (skew > TOLERANCE) {
+		 	call Leds.led1Toggle();
 			call Avt.adjustValue(FEEDBACK_LOWER);
-			call SelfClock.setRate(call Avt.getValue());
-		} else if (skew < (-1.0) * TOLERANCE) {
+			call LogicalClock.setRate(call Avt.getValue());
+		} else if (skew < TOLERANCE) {
+		 	call Leds.led1Toggle();
 			call Avt.adjustValue(FEEDBACK_GREATER);
-			call SelfClock.setRate(call Avt.getValue());
-			call SelfClock.setOffset(myOffset-skew);
+			call LogicalClock.setRate(call Avt.getValue());
+			call LogicalClock.setOffset(myOffset-skew);
 		} else {
+			call Leds.led2Toggle();
 			call Avt.adjustValue(FEEDBACK_GOOD);
-			call SelfClock.setRate(call Avt.getValue());
+			call LogicalClock.setRate(call Avt.getValue());
 		}        
-
-    exit:
+	exit:
         state &= ~STATE_PROCESSING;
     }
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
     {
         /* TODO */
-        uint16_t incomingID = (uint8_t)((EgtspMsg*)payload)->nodeID;
+        uint16_t incomingID = (uint8_t)((SelfMsg*)payload)->nodeID;
         int16_t diff = (incomingID - TOS_NODE_ID);
 
 //        /* LINE topology */
@@ -215,7 +221,7 @@ implementation
 
         if(error == SUCCESS)
         {         
-
+			call Leds.led0Toggle();
         }       
 
         state &= ~STATE_SENDING;
@@ -231,51 +237,20 @@ implementation
 
     event void Timer.fired()
     {
-      if (mode == TS_TIMER_MODE) {
-        timeSyncMsgSend();
-      }
-      else
-        call Timer.stop();
+    	timeSyncMsgSend();
     }
-
-    command error_t TimeSyncMode.setMode(uint8_t mode_){
-        if (mode_ == TS_TIMER_MODE){
-            call Timer.startPeriodic((uint32_t)(896U+(call Random.rand16()&0xFF)) * BEACON_RATE);
-        }
-        else
-            call Timer.stop();
-
-        mode = mode_;
-        return SUCCESS;
-    }
-
-    command uint8_t TimeSyncMode.getMode(){
-        return mode;
-    }
-
-    command error_t TimeSyncMode.send(){
-        if (mode == TS_USER_MODE){
-            timeSyncMsgSend();
-            return SUCCESS;
-        }
-        return FAIL;
-    }
-
+    
     command error_t Init.init()
-    {   
-        
+    {           
         /* init logical clock */ 
-        call SelfClock.start();  
+        call LogicalClock.start();  
         
         /* init adaptive value tracker */      
         call Avt.init(MIN_PPM,MAX_PPM,0); 
 
         atomic outgoingMsg = (SelfMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(SelfMsg));
 
-        outgoingMsg->nodeID = TOS_NODE_ID;
-
-        if(TOS_NODE_ID == ROOT_ID)
-            call Leds.led0On();
+        outgoingMsg->nodeID = TOS_NODE_ID;           
 
         processedMsg = &processedMsgBuffer;
         state = STATE_INIT;
@@ -291,7 +266,7 @@ implementation
 
     command error_t StdControl.start()
     {
-        call TimeSyncMode.setMode(TS_TIMER_MODE);
+        call Timer.startPeriodic((uint32_t)(896U+(call Random.rand16()&0xFF)) * BEACON_RATE);
 
         return SUCCESS;
     }
@@ -301,6 +276,8 @@ implementation
         call Timer.stop();
         return SUCCESS;
     }
+    
+	async command float TimeSyncInfo.getSkew() { return call LogicalClock.getRate(); }
     
     event void RadioControl.startDone(error_t error){}
     event void RadioControl.stopDone(error_t error){}

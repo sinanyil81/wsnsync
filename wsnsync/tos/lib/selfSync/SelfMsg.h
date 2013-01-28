@@ -10,7 +10,7 @@ typedef nx_struct SelfMsg
 
 enum {
     TIMESYNC_AM_SELFSYNC = 0x3D,
-    EGTSPMSG_LEN = sizeof(SelfMsg),
+    SELFMSG_LEN = sizeof(SelfMsg),
     TS_TIMER_MODE = 0,      // see TimeSyncMode interface
     TS_USER_MODE = 1,       // see TimeSyncMode interface
 };

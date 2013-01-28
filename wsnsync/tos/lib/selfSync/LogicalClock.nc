@@ -1,6 +1,8 @@
-interface SelfClock
+interface LogicalClock
 {
     command void start();
+    
+    async command float getRate();
     
     command void setRate(float multiplier);
     
