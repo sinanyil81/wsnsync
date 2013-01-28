@@ -1,23 +1,16 @@
-#if defined(EGTSPMSG_H)
+#if defined(SELFMSG_H)
 #else
-#define EGTSPMSG_H
+#define SELFMSG_H
 
-typedef nx_struct EgtspMsg
+typedef nx_struct SelfMsg
 {	
-	nx_uint16_t	nodeID;		// the node if of the sender
-    nx_uint32_t localTime;  // local time of the sender
-    nx_uint32_t multiplier; // rate multiplier of the sender
-
-	nx_uint32_t	globalTime; 	// time of the root node
-	nx_uint32_t rootMultiplier; // rate multiplier of the root node
-	nx_uint32_t rootOffset; 	// the offset between the logical clock and the hardware clock of the root node	
-    nx_uint8_t  seqNum;     	// sequence number for the root
-	
-} EgtspMsg;
+	nx_uint16_t	nodeID;
+	nx_uint32_t	globalTime;	
+} SelfMsg;
 
 enum {
-    TIMESYNC_AM_EGTSP = 0x3D,
-    EGTSPMSG_LEN = sizeof(EgtspMsg),
+    TIMESYNC_AM_SELFSYNC = 0x3D,
+    EGTSPMSG_LEN = sizeof(SelfMsg),
     TS_TIMER_MODE = 0,      // see TimeSyncMode interface
     TS_USER_MODE = 1,       // see TimeSyncMode interface
 };

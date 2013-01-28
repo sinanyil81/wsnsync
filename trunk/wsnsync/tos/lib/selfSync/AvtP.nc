@@ -20,14 +20,15 @@ implementation
 	
 	uint8_t lastFeedback = FEEDBACK_GOOD;
 			
-    command void Avt.init(float lBound,float uBound,float val,float dMin, float dMax)
+    command void Avt.init(float lBound,float uBound,float val)
     {
 		lowerBound = lBound;
 		upperBound = uBound;
 		value = val;
 		
-		deltaMin = dMin;
-		deltaMax = dMax;
+		/* delta bounds */
+		deltaMin = 0.0000000001;
+		deltaMax = 0.0001;
 		delta = (dMin + dMax)/2.0;
     }
     
@@ -87,8 +88,7 @@ implementation
 
 		// 2 - Adjust the current value
 		if (feedback != FEEDBACK_GOOD) {
-			value = min(upperBound,max(lowerBound,value + delta*(feedback == FEEDBACK_GREATER ? 1 : -1)));
-			/* feedback -1 Sinan ?? */
+			value = min(upperBound,max(lowerBound,value + delta*(feedback == FEEDBACK_GREATER ? 1.0 : -1.0)));
 		}
 		
 		lastFeedback = feedback;
