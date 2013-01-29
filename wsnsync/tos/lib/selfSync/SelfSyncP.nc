@@ -38,9 +38,9 @@ implementation
 #define TIMESYNC_RATE   10
 #endif
 
-	#define MAX_PPM 0.0001
-	#define MIN_PPM -0.0001
-	#define TOLERANCE 1
+	#define MAX_PPM 0.0001f
+	#define MIN_PPM -0.0001f
+	#define TOLERANCE 3
 
     enum {
         BEACON_RATE  = 30,  // how often send the beacon msg (in seconds)       
@@ -63,6 +63,9 @@ implementation
     SelfMsg* outgoingMsg;
 
     uint32_t processedMsgEventTime;
+    
+    /* tuning parameter */ 
+    int THRESHOLD;
 
     async command uint32_t GlobalTime.getLocalTime()
     {
@@ -99,40 +102,39 @@ implementation
 //         *time = approxLocalTime - (int32_t)(skew * (int32_t)(approxLocalTime - localAverage));
         return is_synced();
     }
-
+ 
     void task processMsg()
     {
 		uint32_t myClock;
-		int32_t skew,threshold;         
+		int32_t skew;         
         
         SelfMsg* msg = (SelfMsg*)(call Send.getPayload(processedMsg, sizeof(SelfMsg)));
         call LogicalClock.update(processedMsgEventTime);
         
-        myClock = processedMsgEventTime;
-        
+        myClock = processedMsgEventTime;       
 		call LogicalClock.getValue(&myClock);
 		
 		skew = myClock - msg->globalTime;
-		threshold = (int32_t)((MAX_PPM - MIN_PPM)*1000000.0*(double)BEACON_RATE); 
 		
-		if (skew < -threshold) {
+		if (skew < -THRESHOLD) {
 			call LogicalClock.setValue(msg->globalTime,processedMsgEventTime);
-		} else if (skew > threshold) {
+		} else if (skew > THRESHOLD) {
 			// do nothing
-		} else if (skew > TOLERANCE) {
-		 	call Leds.led1Toggle();
-			call Avt.adjustValue(FEEDBACK_LOWER);
-			call LogicalClock.setRate(call Avt.getValue());
-		} else if (skew < -TOLERANCE) {
-		 	call Leds.led1Toggle();
-			call Avt.adjustValue(FEEDBACK_GREATER);
-			call LogicalClock.setRate(call Avt.getValue());
-			call LogicalClock.setValue(msg->globalTime,processedMsgEventTime);
 		} else {
-			call Leds.led2Toggle();
-			call Avt.adjustValue(FEEDBACK_GOOD);
+			if (skew > TOLERANCE) {
+		 		call Leds.led1Toggle();
+				call Avt.adjustValue(FEEDBACK_LOWER);
+			}
+			else if (skew < -TOLERANCE) {
+		 		call Leds.led1Toggle();
+				call Avt.adjustValue(FEEDBACK_GREATER);
+				call LogicalClock.setValue(msg->globalTime,processedMsgEventTime);
+			} else {
+				call Leds.led2Toggle();
+				call Avt.adjustValue(FEEDBACK_GOOD);
+			}        
 			call LogicalClock.setRate(call Avt.getValue());
-		}        
+		}		
 
         state &= ~STATE_PROCESSING;
     }
@@ -199,7 +201,6 @@ implementation
                         
         outgoingMsg->globalTime = globalTime;
         
-        
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
 #endif
@@ -240,7 +241,10 @@ implementation
         call LogicalClock.start();  
         
         /* init adaptive value tracker */      
-        call Avt.init(MIN_PPM,MAX_PPM,0); 
+        call Avt.init(-0.001f,0.001f,0); 
+        
+        THRESHOLD = (int32_t)((MAX_PPM - MIN_PPM)*1000000.0f*(double)BEACON_RATE);
+        THRESHOLD = 1000;
 
         atomic outgoingMsg = (SelfMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(SelfMsg));
 
