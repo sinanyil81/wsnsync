@@ -9,8 +9,8 @@ module AvtC
 }
 implementation
 {
-	#define INCREASE_FACTOR 2.0
-	#define DECREASE_FACTOR 3.0
+	#define INCREASE_FACTOR 2.0f
+	#define DECREASE_FACTOR 3.0f
 	 
 	float lowerBound = 0.0;
 	float upperBound = 0.0;
@@ -18,7 +18,7 @@ implementation
 	
 	float delta, deltaMin, deltaMax;
 	
-	uint8_t lastFeedback = FEEDBACK_GOOD;
+	uint8_t lastFeedback = FEEDBACK_NONE;
 			
     command void Avt.init(float lBound,float uBound,float val)
     {
@@ -27,14 +27,19 @@ implementation
 		value = val;
 		
 		/* delta bounds */
-		deltaMin = 0.0000000001;
-		deltaMax = 0.0001;
-		delta = (deltaMin + deltaMax)/2.0;
+		deltaMin = 0.00000001f;
+		deltaMax = 0.00001024f;
+		delta = 0.00000032f;
     }
     
     command float Avt.getValue(){
     
     	return value;
+    }
+    
+	command float Avt.getDelta(){
+    
+    	return delta;
     }
     
     void increaseDelta(){
@@ -54,6 +59,9 @@ implementation
     }
         
     void updateDelta(uint8_t feedback){
+    	if(lastFeedback == FEEDBACK_NONE)
+    		return;
+    
     	if (lastFeedback == FEEDBACK_GOOD) {
 			if (feedback == FEEDBACK_GOOD) {
 				decreaseDelta();
@@ -88,7 +96,7 @@ implementation
 
 		// 2 - Adjust the current value
 		if (feedback != FEEDBACK_GOOD) {
-			value = min(upperBound,max(lowerBound,value + delta*(feedback == FEEDBACK_GREATER ? 1.0 : -1.0)));
+			value = min(upperBound,max(lowerBound,value + delta*(feedback == FEEDBACK_GREATER ? 1.0f : -1.0f)));
 		}
 		
 		lastFeedback = feedback;

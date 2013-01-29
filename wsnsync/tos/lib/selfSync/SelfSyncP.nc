@@ -102,7 +102,7 @@ implementation
 
     void task processMsg()
     {
-		uint32_t myClock,myOffset;
+		uint32_t myClock;
 		int32_t skew,threshold;         
         
         SelfMsg* msg = (SelfMsg*)(call Send.getPayload(processedMsg, sizeof(SelfMsg)));
@@ -111,35 +111,29 @@ implementation
         myClock = processedMsgEventTime;
         
 		call LogicalClock.getValue(&myClock);
-		myOffset = call LogicalClock.getOffset();
 		
 		skew = myClock - msg->globalTime;
 		threshold = (int32_t)((MAX_PPM - MIN_PPM)*1000000.0*(double)BEACON_RATE); 
 		
-		if(skew < -threshold*3){
-			call LogicalClock.setValue(msg->globalTime,processedMsgEventTime);
-			goto exit;
-		}		
-
 		if (skew < -threshold) {
-			call LogicalClock.setOffset(myOffset-skew);
+			call LogicalClock.setValue(msg->globalTime,processedMsgEventTime);
 		} else if (skew > threshold) {
 			// do nothing
 		} else if (skew > TOLERANCE) {
 		 	call Leds.led1Toggle();
 			call Avt.adjustValue(FEEDBACK_LOWER);
 			call LogicalClock.setRate(call Avt.getValue());
-		} else if (skew < TOLERANCE) {
+		} else if (skew < -TOLERANCE) {
 		 	call Leds.led1Toggle();
 			call Avt.adjustValue(FEEDBACK_GREATER);
 			call LogicalClock.setRate(call Avt.getValue());
-			call LogicalClock.setOffset(myOffset-skew);
+			call LogicalClock.setValue(msg->globalTime,processedMsgEventTime);
 		} else {
 			call Leds.led2Toggle();
 			call Avt.adjustValue(FEEDBACK_GOOD);
 			call LogicalClock.setRate(call Avt.getValue());
 		}        
-	exit:
+
         state &= ~STATE_PROCESSING;
     }
 
