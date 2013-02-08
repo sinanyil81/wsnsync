@@ -18,6 +18,8 @@ implementation
 	
 	float delta, deltaMin, deltaMax;
 	
+	uint8_t numSuccessiveGood = 0;
+	
 	uint8_t lastFeedback = FEEDBACK_NONE;
 			
     command void Avt.init(float lBound,float uBound,float val)
@@ -64,6 +66,7 @@ implementation
     
     	if (lastFeedback == FEEDBACK_GOOD) {
 			if (feedback == FEEDBACK_GOOD) {
+				numSuccessiveGood++;
 				decreaseDelta();
 			} else {
 				increaseDelta();
