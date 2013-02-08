@@ -62,7 +62,8 @@ implementation
     
     	if (lastFeedback == FEEDBACK_GOOD) {
 			if (feedback == FEEDBACK_GOOD) {
-				decreaseDelta();
+				// do not decrease on consecutive feedbacks
+				// decreaseDelta();
 			} else {
 				increaseDelta();
 			}
