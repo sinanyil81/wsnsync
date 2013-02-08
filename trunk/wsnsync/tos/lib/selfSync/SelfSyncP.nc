@@ -65,7 +65,7 @@ implementation
     uint32_t processedMsgEventTime;
     
     /* tuning parameter */ 
-    int THRESHOLD;
+    int32_t THRESHOLD;
 
     async command uint32_t GlobalTime.getLocalTime()
     {
@@ -118,6 +118,8 @@ implementation
 		
 		if (skew < -THRESHOLD) {
 			call LogicalClock.setValue(msg->globalTime,processedMsgEventTime);
+			call Avt.adjustValue(FEEDBACK_GREATER);
+			call LogicalClock.setRate(call Avt.getValue());
 		} else if (skew > THRESHOLD) {
 			// do nothing
 		} else {
@@ -241,12 +243,12 @@ implementation
         call LogicalClock.start();  
         
         /* init adaptive value tracker */      
-        call Avt.init(-0.001f,0.001f,0); 
+        call Avt.init(MIN_PPM,MAX_PPM,0); 
         
         THRESHOLD = (int32_t)((MAX_PPM - MIN_PPM)*1000000.0f*(double)BEACON_RATE);
-        THRESHOLD = 1000;
+        //THRESHOLD = 2000;
 
-        atomic outgoingMsg = (SelfMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(SelfMsg));
+        outgoingMsg = (SelfMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(SelfMsg));
 
         outgoingMsg->nodeID = TOS_NODE_ID;           
 
