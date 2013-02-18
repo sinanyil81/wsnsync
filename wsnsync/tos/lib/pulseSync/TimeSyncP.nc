@@ -127,6 +127,9 @@ implementation
 
     message_t outgoingMsgBuffer;
     TimeSyncMsg* outgoingMsg;
+    
+    uint32_t pulse;
+    uint32_t pulseTime; 
 
     async command uint32_t GlobalTime.getLocalTime()
     {
@@ -287,13 +290,18 @@ implementation
         table[freeItem].timeOffset = msg->globalTime - msg->localTime;
     }
     
-        task void sendMsg()
+    task void sendMsg()
     {
         uint32_t localTime, globalTime;
 
         globalTime = localTime = call GlobalTime.getLocalTime();
-        call GlobalTime.local2Global(&globalTime);
-
+        
+		if( ROOT_ID != TOS_NODE_ID ){
+        	int32_t elapsed = localTime - pulseTime;         
+        	
+        	globalTime =  pulse + elapsed +  (int32_t)(skew * (int32_t)(elapsed));
+        }
+        
        outgoingMsg->globalTime = globalTime;
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
@@ -332,6 +340,9 @@ implementation
 
         if( ROOT_ID == msg->rootID && (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
+            
+            pulse = msg->globalTime;           
+            pulseTime = msg->localTime;
         }
         else
             goto exit;
