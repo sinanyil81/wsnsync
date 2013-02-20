@@ -32,6 +32,10 @@
  * @author: Miklos Maroti, Brano Kusy (kusy@isis.vanderbilt.edu)
  * Ported to T2: 3/17/08 by Brano Kusy (branislav.kusy@gmail.com)
  */
+ 
+/* 
+ * modified by K. Sinan YILDIRIM (sinanyil81@gmail.com)
+ */
 
 interface TimeSyncInfo
 {
