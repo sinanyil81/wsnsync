@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002, Vanderbilt University
+ * Copyright (c) 2013, EGE University, Izmir, Turkey
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,10 +28,12 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * @author: Miklos Maroti, Brano Kusy (kusy@isis.vanderbilt.edu), Janos Sallai
- * Ported to T2: 3/17/08 by Brano Kusy (branislav.kusy@gmail.com)
  */
+
+/*
+ * @author: K. Sinan YILDIRIM (sinanyil81@gmail.com)
+ */
+ 
 #include "TimeSyncMsg.h"
 #include "Avt.h"
 
