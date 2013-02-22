@@ -221,6 +221,7 @@ implementation
             /* init AVT */
             call Avt.init(LOWER_BOUND,UPPER_BOUND,INITIAL_VALUE,MIN_DELTA,MAX_DELTA,INITIAL_DELTA);
             atomic skew = 0.0f; 
+            call TimeSyncMode.setMode(TS_TIMER_MODE); /* restart timer */ 
         }
 
         outgoingMsg->globalTime = globalTime;
@@ -262,6 +263,7 @@ implementation
             outgoingMsg->rootID = msg->rootID;
             outgoingMsg->seqNum = msg->seqNum;
             numCollected = 0;
+            call TimeSyncMode.setMode(TS_USER_MODE); /* stop timer */
         }
         else if( outgoingMsg->rootID == msg->rootID && (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
             outgoingMsg->seqNum = msg->seqNum;
