@@ -54,6 +54,8 @@ implementation
 	
 	float delta, deltaMin, deltaMax;
 	
+	uint8_t goodCount = 0;
+	
 	uint8_t lastFeedback = FEEDBACK_GOOD;
 			
     command void Avt.init(float lBound,float uBound,float val,float dMin,float dMax,float dInitial)
@@ -98,8 +100,9 @@ implementation
     
     	if (lastFeedback == FEEDBACK_GOOD) {
 			if (feedback == FEEDBACK_GOOD) {
-				// do not decrease on consecutive feedbacks
-				// decreaseDelta();
+				if(++goodCount & 0x1) 
+					decreaseDelta();
+				return;
 			} else {
 				increaseDelta();
 			}
@@ -108,6 +111,8 @@ implementation
 		}else{
 			increaseDelta();
 		}
+		
+		goodCount = 0;
     }
     
     float min(float a,float b){
