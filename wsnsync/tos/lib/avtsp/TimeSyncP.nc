@@ -74,13 +74,14 @@ implementation
 #ifndef TIMESYNC_RATE
 #define TIMESYNC_RATE   10
 #endif
-
+	
     enum {
         BEACON_RATE           = TIMESYNC_RATE,  // how often send the beacon msg (in seconds)
         ROOT_TIMEOUT          = 5,              //time to declare itself the root if no msg was received (in sync periods)
         IGNORE_ROOT_MSG       = 4,              // after becoming the root ignore other roots messages (in send period)
         SYNC_LIMIT      	  = 8,              // number of entries to send sync messages
-        ENTRY_THROWOUT_LIMIT  = 1000,           // if time sync error is bigger than this clear the table
+        ENTRY_THROWOUT_LIMIT  = 10000,          // if time sync error is bigger than this clear the table
+        										// > 2*MAX_PPM*BEACON_RATE
     };
     
     enum {
@@ -232,25 +233,15 @@ implementation
     }
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
-    {
-#ifdef TIMESYNC_DEBUG   // this code can be used to simulate multiple hopsf
-        uint8_t incomingID = (uint8_t)((TimeSyncMsg*)payload)->nodeID;
-        int8_t diff = (incomingID & 0x0F) - (TOS_NODE_ID & 0x0F);
-        if( diff < -1 || diff > 1 )
-            return msg;
-        diff = (incomingID & 0xF0) - (TOS_NODE_ID & 0xF0);
-        if( diff < -16 || diff > 16 )
-            return msg;
-#endif
-      
+    {    
       uint16_t incomingID = (uint8_t)((TimeSyncMsg*)payload)->nodeID;
       int16_t diff = (incomingID - TOS_NODE_ID);
       /* LINE topology */
-/*      if( diff < -1 || diff > 1 )
-        	return msg; */
+      if( diff < -1 || diff > 1 )
+        	return msg;
        
       /* 5X4 GRID topology */
-  	  if(TOS_NODE_ID % 4 == 1) {
+  	  /* if(TOS_NODE_ID % 4 == 1) {
 	  	if(!(diff == 1 || diff == -4 || diff == 4 )){
 	  		return msg;
 	  	}
@@ -262,19 +253,7 @@ implementation
 	  }
 	  else if(!(diff == -1 || diff == 1 || diff == -4 || diff == 4 )){
 	   	return msg;
-	  }
-
-        /* RING of 18 sensor nodes */
-//         if(TOS_NODE_ID == 1){
-//             if( incomingID !=18 && incomingID!=2)
-//               return msg;
-//         }
-//         else if(TOS_NODE_ID == 18){
-//           if( incomingID !=1 && incomingID!=17)
-//             return msg;
-//         }
-//         else if( diff < -1 || diff > 1 )
-//           return msg;
+	  } */
 
         if( (state & STATE_PROCESSING) == 0
             && call TimeSyncPacket.isValid(msg)) {

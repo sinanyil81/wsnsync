@@ -37,7 +37,7 @@
 #include "TimeSyncMsg.h"
 #include "Avt.h"
 
-generic module TimeSyncP(typedef precision_tag)
+generic module TimeSyncFastP(typedef precision_tag)
 {
     provides
     {
@@ -198,101 +198,7 @@ implementation
         	skew = newSkew;
         }
     }
-
-    void task processMsg()
-    {
-        TimeSyncMsg* msg = (TimeSyncMsg*)(call Send.getPayload(processedMsg, sizeof(TimeSyncMsg)));
-
-        if( msg->rootID < outgoingMsg->rootID){ // &&
-            //after becoming the root, a node ignores messages that advertise the old root (it may take
-            //some time for all nodes to timeout and discard the old root) 
-            //!(heartBeats < IGNORE_ROOT_MSG && outgoingMsg->rootID == TOS_NODE_ID) ){
-            outgoingMsg->rootID = msg->rootID;
-            outgoingMsg->seqNum = msg->seqNum;
-            numCollected = 0;
-        }
-        else if( outgoingMsg->rootID == msg->rootID && (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
-            outgoingMsg->seqNum = msg->seqNum;
-            numCollected++;
-        }
-        else
-            goto exit;
-
-		/* synchronize to the reference node  :) */
-		synchronize(msg);
-		
-        call Leds.led0Toggle();
-        if( outgoingMsg->rootID < TOS_NODE_ID )
-            heartBeats = 0;
-	
-        signal TimeSyncNotify.msg_received();
-        post sendMsg();
-
-    exit:
-        state &= ~STATE_PROCESSING;
-    }
-
-    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
-    {
-#ifdef TIMESYNC_DEBUG   // this code can be used to simulate multiple hopsf
-        uint8_t incomingID = (uint8_t)((TimeSyncMsg*)payload)->nodeID;
-        int8_t diff = (incomingID & 0x0F) - (TOS_NODE_ID & 0x0F);
-        if( diff < -1 || diff > 1 )
-            return msg;
-        diff = (incomingID & 0xF0) - (TOS_NODE_ID & 0xF0);
-        if( diff < -16 || diff > 16 )
-            return msg;
-#endif
-      
-      uint16_t incomingID = (uint8_t)((TimeSyncMsg*)payload)->nodeID;
-      int16_t diff = (incomingID - TOS_NODE_ID);
-      /* LINE topology */
-/*      if( diff < -1 || diff > 1 )
-        	return msg; */
-       
-      /* 5X4 GRID topology */
-  	  if(TOS_NODE_ID % 4 == 1) {
-	  	if(!(diff == 1 || diff == -4 || diff == 4 )){
-	  		return msg;
-	  	}
-	  }
-	  else if (TOS_NODE_ID % 4 == 0) {
-	  	if(!(diff == -1 || diff == -4 || diff == 4 )){
-	  		return msg;
-	  	}
-	  }
-	  else if(!(diff == -1 || diff == 1 || diff == -4 || diff == 4 )){
-	   	return msg;
-	  }
-
-        /* RING of 18 sensor nodes */
-//         if(TOS_NODE_ID == 1){
-//             if( incomingID !=18 && incomingID!=2)
-//               return msg;
-//         }
-//         else if(TOS_NODE_ID == 18){
-//           if( incomingID !=1 && incomingID!=17)
-//             return msg;
-//         }
-//         else if( diff < -1 || diff > 1 )
-//           return msg;
-
-        if( (state & STATE_PROCESSING) == 0
-            && call TimeSyncPacket.isValid(msg)) {
-            message_t* old = processedMsg;
-
-            processedMsg = msg;
-            ((TimeSyncMsg*)(payload))->localTime = call TimeSyncPacket.eventTime(msg);
-
-            state |= STATE_PROCESSING;
-            post processMsg();
-
-            return old;
-        }
-
-        return msg;
-    }
-
+    
     task void sendMsg()
     {
         uint32_t localTime, globalTime;
@@ -343,6 +249,78 @@ implementation
 
         state &= ~STATE_SENDING;
         signal TimeSyncNotify.msg_sent();
+    }
+    
+    void task processMsg()
+    {
+        TimeSyncMsg* msg = (TimeSyncMsg*)(call Send.getPayload(processedMsg, sizeof(TimeSyncMsg)));
+
+        if( msg->rootID < outgoingMsg->rootID){ // &&
+            //after becoming the root, a node ignores messages that advertise the old root (it may take
+            //some time for all nodes to timeout and discard the old root) 
+            //!(heartBeats < IGNORE_ROOT_MSG && outgoingMsg->rootID == TOS_NODE_ID) ){
+            outgoingMsg->rootID = msg->rootID;
+            outgoingMsg->seqNum = msg->seqNum;
+            numCollected = 0;
+        }
+        else if( outgoingMsg->rootID == msg->rootID && (int8_t)(msg->seqNum - outgoingMsg->seqNum) > 0 ) {
+            outgoingMsg->seqNum = msg->seqNum;
+            numCollected++;
+        }
+        else
+            goto exit;
+
+		/* synchronize to the reference node  :) */
+		synchronize(msg);
+		
+        call Leds.led0Toggle();
+        if( outgoingMsg->rootID < TOS_NODE_ID )
+            heartBeats = 0;
+	
+        signal TimeSyncNotify.msg_received();
+        post sendMsg();
+
+    exit:
+        state &= ~STATE_PROCESSING;
+    }
+
+    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len)
+    {    
+      uint16_t incomingID = (uint8_t)((TimeSyncMsg*)payload)->nodeID;
+      int16_t diff = (incomingID - TOS_NODE_ID);
+      /* LINE topology */
+     if( diff < -1 || diff > 1 )
+        	return msg;
+       
+      /* 5X4 GRID topology */
+  	  /* if(TOS_NODE_ID % 4 == 1) {
+	  	if(!(diff == 1 || diff == -4 || diff == 4 )){
+	  		return msg;
+	  	}
+	  }
+	  else if (TOS_NODE_ID % 4 == 0) {
+	  	if(!(diff == -1 || diff == -4 || diff == 4 )){
+	  		return msg;
+	  	}
+	  }
+	  else if(!(diff == -1 || diff == 1 || diff == -4 || diff == 4 )){
+	   	return msg;
+	  } */
+
+        if( (state & STATE_PROCESSING) == 0
+            && call TimeSyncPacket.isValid(msg)) {
+            message_t* old = processedMsg;
+
+            processedMsg = msg;
+            ((TimeSyncMsg*)(payload))->localTime = call TimeSyncPacket.eventTime(msg);
+
+            state |= STATE_PROCESSING;
+            post processMsg();
+
+            return old;
+        }
+
+        return msg;
     }
 
     void timeSyncMsgSend()
