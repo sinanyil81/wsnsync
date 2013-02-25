@@ -57,8 +57,8 @@ implementation
 #error "LPL timesync is not available for your platform"
 #endif
 
-  //components new TimeSyncP(TMicro) as TimeSyncP;
-  components new TimeSyncFastP(TMicro) as TimeSyncP;
+  components new TimeSyncP(TMicro) as TimeSyncP;
+  //components new TimeSyncFastP(TMicro) as TimeSyncP;
 
   GlobalTime      =   TimeSyncP;
   StdControl      =   TimeSyncP;

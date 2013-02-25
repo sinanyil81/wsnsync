@@ -98,11 +98,9 @@ implementation
     
     	if (lastFeedback == FEEDBACK_GOOD) {
 			if (feedback == FEEDBACK_GOOD) {
-				//decreaseDelta();
-				return;
-			} else {
 				decreaseDelta();
-				//increaseDelta();
+			} else {
+				// do not change delta
 			}
 		}else if (lastFeedback != feedback) {
 			decreaseDelta();
