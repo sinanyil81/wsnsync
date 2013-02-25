@@ -93,20 +93,10 @@ implementation
 
     uint8_t state, mode;
     
-    /* adaptive value tracking parameters */ 
    	#define TOLERANCE 0
-   	#define MIN_DELTA 0.0000000001f
-   	#define MAX_DELTA 0.00001f
-    #define INITIAL_DELTA 0.000001f	
-    #define UPPER_BOUND 0.0001f
-    #define LOWER_BOUND	-0.0001f
-    #define INITIAL_VALUE 0.0f
-    /* ---------------------------------- */
 
 	/* logical clock parameters */ 
     float       skew;
-    uint32_t    localAverage;
-    int32_t     offsetAverage;
     uint32_t    clock;
     uint32_t	lastUpdate;
     /* --------------------------*/
@@ -141,12 +131,12 @@ implementation
       else
         return FAIL;
     }   
-
+    
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
-    	//uint32_t timePassed = *time - lastUpdate;
-        //*time = clock + timePassed + (int32_t)(skew * (int32_t)(timePassed));        
-        *time += offsetAverage + (int32_t)(skew * (int32_t)(*time - localAverage));
+    	uint32_t timePassed = *time - lastUpdate;
+        *time = clock + timePassed + (int32_t)(skew * (int32_t)(timePassed));
+
         return SUCCESS;
     }
 
@@ -162,9 +152,7 @@ implementation
     {
         int32_t timeError;
         float newSkew;
-        uint32_t meanX;
-        int32_t meanY;
-
+		
         timeError = msg->localTime;
         call GlobalTime.local2Global((uint32_t*)(&timeError));
         timeError -= msg->globalTime;
@@ -195,22 +183,13 @@ implementation
 			call Avt.adjustValue(FEEDBACK_GOOD);
 		}
 		
-		/* just to minimize errors */
-		meanX = msg->localTime - lastUpdate;
-		meanX = lastUpdate + (meanX / 2);
-		
-		meanY = (int32_t)(msg->globalTime - msg->localTime) - (int32_t)(clock - lastUpdate);	
-		meanY = (int32_t)(clock - lastUpdate) + (meanY / 2);
-		
 		newSkew = call Avt.getValue();
-    	clock  = msg->globalTime;
-    	lastUpdate = msg->localTime;
     	    	
         /* update logical clock parameters */
         atomic{
         	skew = newSkew;
-        	localAverage = meanX;
-        	offsetAverage = meanY;
+        	clock  = msg->globalTime;
+    		lastUpdate = msg->localTime;
         }
     }
 
@@ -305,7 +284,7 @@ implementation
             outgoingMsg->rootID = TOS_NODE_ID;
             ++(outgoingMsg->seqNum); // maybe set it to zero?
             /* maybe init AVT */
-            call Avt.init(LOWER_BOUND,UPPER_BOUND,INITIAL_VALUE,MIN_DELTA,MAX_DELTA,INITIAL_DELTA);
+            call Avt.init();
             atomic skew = 0.0f; 
         }
 
@@ -313,10 +292,10 @@ implementation
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
 #endif
-        if(is_synced() != SUCCESS){
+/*        if(is_synced() != SUCCESS){
         	state &= ~STATE_SENDING;
         }
-        else if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, TIMESYNCMSG_LEN, localTime ) != SUCCESS ){
+        else*/ if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, TIMESYNCMSG_LEN, localTime ) != SUCCESS ){
             state &= ~STATE_SENDING;
             signal TimeSyncNotify.msg_sent();
         }        	
@@ -393,7 +372,7 @@ implementation
             lastUpdate = 0;
         };
         
-        call Avt.init(LOWER_BOUND,UPPER_BOUND,INITIAL_VALUE,MIN_DELTA,MAX_DELTA,INITIAL_DELTA); 
+        call Avt.init(); 
 
         atomic outgoingMsg = (TimeSyncMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(TimeSyncMsg));
         outgoingMsg->rootID = 0xFFFF;
