@@ -74,16 +74,16 @@ implementation
 #ifndef TIMESYNC_RATE
 #define TIMESYNC_RATE   10
 #endif
-	
+
     enum {
         BEACON_RATE           = TIMESYNC_RATE,  // how often send the beacon msg (in seconds)
         ROOT_TIMEOUT          = 5,              //time to declare itself the root if no msg was received (in sync periods)
         IGNORE_ROOT_MSG       = 4,              // after becoming the root ignore other roots messages (in send period)
-        SYNC_LIMIT      	  = 8,              // number of entries to send sync messages
-        ENTRY_THROWOUT_LIMIT  = 10000,          // if time sync error is bigger than this clear the table
-        										// > 2*MAX_PPM*BEACON_RATE
+        ENTRY_SEND_LIMIT  	  = 5,              // number of entries to send sync messages
+        ENTRY_THROWOUT_LIMIT  = 1000,           // if time sync error is bigger than this clear the table
+	  	  	  	  	  	  	  	  	  	  	  	// > 2*MAX_PPM*BEACON_RATE
     };
-    
+   
     enum {
         STATE_IDLE = 0x00,
         STATE_PROCESSING = 0x01,
@@ -105,6 +105,8 @@ implementation
 
 	/* logical clock parameters */ 
     float       skew;
+    uint32_t    localAverage;
+    int32_t     offsetAverage;
     uint32_t    clock;
     uint32_t	lastUpdate;
     /* --------------------------*/
@@ -134,7 +136,7 @@ implementation
     
     error_t is_synced()
     {
-      if (numCollected>=SYNC_LIMIT || outgoingMsg->rootID==TOS_NODE_ID)
+      if (numCollected >= ENTRY_SEND_LIMIT || outgoingMsg->rootID==TOS_NODE_ID)
         return SUCCESS;
       else
         return FAIL;
@@ -142,8 +144,9 @@ implementation
 
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
-    	uint32_t timePassed = *time - lastUpdate;
-        *time = clock + timePassed + (int32_t)(skew * (int32_t)(timePassed));
+    	//uint32_t timePassed = *time - lastUpdate;
+        //*time = clock + timePassed + (int32_t)(skew * (int32_t)(timePassed));        
+        *time += offsetAverage + (int32_t)(skew * (int32_t)(*time - localAverage));
         return SUCCESS;
     }
 
@@ -159,6 +162,8 @@ implementation
     {
         int32_t timeError;
         float newSkew;
+        uint32_t meanX;
+        int32_t meanY;
 
         timeError = msg->localTime;
         call GlobalTime.local2Global((uint32_t*)(&timeError));
@@ -190,13 +195,22 @@ implementation
 			call Avt.adjustValue(FEEDBACK_GOOD);
 		}
 		
+		/* just to minimize errors */
+		meanX = msg->localTime - lastUpdate;
+		meanX = lastUpdate + (meanX / 2);
+		
+		meanY = (int32_t)(msg->globalTime - msg->localTime) - (int32_t)(clock - lastUpdate);	
+		meanY = (int32_t)(clock - lastUpdate) + (meanY / 2);
+		
 		newSkew = call Avt.getValue();
-       
+    	clock  = msg->globalTime;
+    	lastUpdate = msg->localTime;
+    	    	
         /* update logical clock parameters */
         atomic{
-        	clock  = msg->globalTime;
-        	lastUpdate = msg->localTime;
         	skew = newSkew;
+        	localAverage = meanX;
+        	offsetAverage = meanY;
         }
     }
 
@@ -290,7 +304,7 @@ implementation
             heartBeats = 0; //to allow ROOT_SWITCH_IGNORE to work
             outgoingMsg->rootID = TOS_NODE_ID;
             ++(outgoingMsg->seqNum); // maybe set it to zero?
-            /* init AVT */
+            /* maybe init AVT */
             call Avt.init(LOWER_BOUND,UPPER_BOUND,INITIAL_VALUE,MIN_DELTA,MAX_DELTA,INITIAL_DELTA);
             atomic skew = 0.0f; 
         }
@@ -299,10 +313,13 @@ implementation
 #ifdef LOW_POWER_LISTENING
         call LowPowerListening.setRemoteWakeupInterval(&outgoingMsgBuffer, LPL_INTERVAL);
 #endif
-        if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, TIMESYNCMSG_LEN, localTime ) != SUCCESS ){
+        if(is_synced() != SUCCESS){
+        	state &= ~STATE_SENDING;
+        }
+        else if( call Send.send(AM_BROADCAST_ADDR, &outgoingMsgBuffer, TIMESYNCMSG_LEN, localTime ) != SUCCESS ){
             state &= ~STATE_SENDING;
             signal TimeSyncNotify.msg_sent();
-        }
+        }        	
     }
 
     event void Send.sendDone(message_t* ptr, error_t error)
