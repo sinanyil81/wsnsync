@@ -38,11 +38,27 @@
 #else
 #define AVT_H
 
-enum {
-    FEEDBACK_GREATER = 0,
-    FEEDBACK_LOWER = 1,
-    FEEDBACK_GOOD = 2,
-    FEEDBACK_NONE = 3,
-};
+	/* feedback definitions */
+	enum {
+	    FEEDBACK_GREATER = 0,
+	    FEEDBACK_LOWER = 1,
+	    FEEDBACK_GOOD = 2,
+	    FEEDBACK_NONE = 3,
+	};
+	/* ---------------------------------- */
+	
+	/* delta step parameters */
+	#define INCREASE_FACTOR 2.0f
+	#define DECREASE_FACTOR 3.0f
+	/* ---------------------------------- */
+
+    /* adaptive value tracking parameters */ 
+   	#define MIN_DELTA 0.000000000001f
+   	#define MAX_DELTA 0.00001f
+    #define INITIAL_DELTA 0.00001f	
+    #define UPPER_BOUND 0.0001f
+    #define LOWER_BOUND	-0.0001f
+    #define INITIAL_VALUE 0.0f
+    /* ---------------------------------- */
 
 #endif
