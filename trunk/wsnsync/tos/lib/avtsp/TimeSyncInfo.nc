@@ -45,6 +45,11 @@ interface TimeSyncInfo
 	 * representation precision.
 	 */
 	async command float getSkew();
+	
+	/**
+	 * Returns current delta 
+	 */
+	command float getDelta();
 
 	/**
 	 * Returns the current root to which this node is synchronized. 
