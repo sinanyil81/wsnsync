@@ -156,7 +156,7 @@ implementation
         timeError = msg->localTime;
         call GlobalTime.local2Global((uint32_t*)(&timeError));
         timeError -= msg->globalTime;
-        
+       
         /* check the received clock value and determine that if it is a nice value */
         if( (is_synced() == SUCCESS) &&
             (timeError > ENTRY_THROWOUT_LIMIT || timeError < -ENTRY_THROWOUT_LIMIT))
@@ -171,6 +171,7 @@ implementation
         }	
         
         errorCount = 0;
+        
         
         /* adjust the speed of the logical clock */
 		if (timeError > TOLERANCE) {
@@ -284,8 +285,8 @@ implementation
             outgoingMsg->rootID = TOS_NODE_ID;
             ++(outgoingMsg->seqNum); // maybe set it to zero?
             /* maybe init AVT */
-            call Avt.init();
-            atomic skew = 0.0f; 
+            // call Avt.init();
+            // atomic skew = 0.0f; 
         }
 
         outgoingMsg->globalTime = globalTime;
@@ -404,7 +405,9 @@ implementation
         return SUCCESS;
     }
 
-    async command float     TimeSyncInfo.getSkew() { return skew; }
+    async command float  TimeSyncInfo.getSkew() { return skew; }
+    command float TimeSyncInfo.getDelta() { return call Avt.getDelta(); }
+    
     async command uint16_t  TimeSyncInfo.getRootID() { return outgoingMsg->rootID; }
     async command uint8_t   TimeSyncInfo.getSeqNum() { return outgoingMsg->seqNum; }
     async command uint8_t   TimeSyncInfo.getHeartBeats() { return heartBeats; }
