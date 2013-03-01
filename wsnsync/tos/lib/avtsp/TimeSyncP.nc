@@ -93,7 +93,7 @@ implementation
 
     uint8_t state, mode;
     
-   	#define TOLERANCE 0
+   	#define TOLERANCE 1
 
 	/* logical clock parameters */ 
     float       skew;
@@ -171,7 +171,6 @@ implementation
         }	
         
         errorCount = 0;
-        
         
         /* adjust the speed of the logical clock */
 		if (timeError > TOLERANCE) {
