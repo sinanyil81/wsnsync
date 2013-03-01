@@ -42,7 +42,8 @@ enum AppAmId{
 typedef nx_struct TSyncAppMsg_t {
   nx_uint16_t nodeid;
   nx_uint32_t clock;
-  nx_uint32_t skew; 
+  nx_uint32_t skew;
+  nx_uint32_t delta; 
 } TSyncAppMsg;
 
 #endif /* TSYNC_APP_H */
