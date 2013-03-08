@@ -60,7 +60,6 @@ implementation{
   uint32_t  local   = 0;
   uint32_t  clock   = 0;
   float     skew    = 0;
-  float 	delta   = 0;
     
   task void sendTask(){
     
@@ -88,7 +87,6 @@ implementation{
     msgptr->nodeid = TOS_NODE_ID;
     msgptr->clock  = clock;
     msgptr->skew   = *((uint32_t *)&skew);
-    msgptr->delta  = *((uint32_t *)&delta);
          
     post sendTask();
   }
@@ -118,8 +116,7 @@ implementation{
         if (call PacketTimeStamp.isValid(msg)){
           clock         = call PacketTimeStamp.timestamp(msg);         
           call GlobalTime.local2Global(&clock);         
-          skew = call TimeSyncInfo.getSkew();
-          delta = call TimeSyncInfo.getDelta();                       
+          skew = call TimeSyncInfo.getSkew();           
           call Timer0.startOneShot(50*TOS_NODE_ID + 20);
         }
       }
