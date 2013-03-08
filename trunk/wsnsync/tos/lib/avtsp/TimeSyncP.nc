@@ -93,7 +93,7 @@ implementation
 
     uint8_t state, mode;
     
-   	#define TOLERANCE 1
+   	#define TOLERANCE 0
 
 	/* logical clock parameters */ 
     float       skew;

@@ -79,10 +79,11 @@ implementation
         BEACON_RATE           = TIMESYNC_RATE,  // how often send the beacon msg (in seconds)
         ROOT_TIMEOUT          = 5,              //time to declare itself the root if no msg was received (in sync periods)
         IGNORE_ROOT_MSG       = 4,              // after becoming the root ignore other roots messages (in send period)
-        SYNC_LIMIT      	  = 8,              // number of entries to send sync messages
+        ENTRY_SEND_LIMIT  	  = 5,              // number of entries to send sync messages
         ENTRY_THROWOUT_LIMIT  = 1000,           // if time sync error is bigger than this clear the table
+	  	  	  	  	  	  	  	  	  	  	  	// > 2*MAX_PPM*BEACON_RATE
     };
-    
+   
     enum {
         STATE_IDLE = 0x00,
         STATE_PROCESSING = 0x01,
@@ -92,15 +93,7 @@ implementation
 
     uint8_t state, mode;
     
-    /* adaptive value tracking parameters */ 
    	#define TOLERANCE 0
-   	#define MIN_DELTA 0.0000000001f
-   	#define MAX_DELTA 0.00001f
-    #define INITIAL_DELTA 0.000001f	
-    #define UPPER_BOUND 0.0001f
-    #define LOWER_BOUND	-0.0001f
-    #define INITIAL_VALUE 0.0f
-    /* ---------------------------------- */
 
 	/* logical clock parameters */ 
     float       skew;
@@ -133,16 +126,17 @@ implementation
     
     error_t is_synced()
     {
-      if (numCollected>=SYNC_LIMIT || outgoingMsg->rootID==TOS_NODE_ID)
+      if (numCollected >= ENTRY_SEND_LIMIT || outgoingMsg->rootID==TOS_NODE_ID)
         return SUCCESS;
       else
         return FAIL;
     }   
-
+    
     async command error_t GlobalTime.local2Global(uint32_t *time)
     {
     	uint32_t timePassed = *time - lastUpdate;
         *time = clock + timePassed + (int32_t)(skew * (int32_t)(timePassed));
+
         return SUCCESS;
     }
 
@@ -158,11 +152,11 @@ implementation
     {
         int32_t timeError;
         float newSkew;
-
+		
         timeError = msg->localTime;
         call GlobalTime.local2Global((uint32_t*)(&timeError));
         timeError -= msg->globalTime;
-        
+       
         /* check the received clock value and determine that if it is a nice value */
         if( (is_synced() == SUCCESS) &&
             (timeError > ENTRY_THROWOUT_LIMIT || timeError < -ENTRY_THROWOUT_LIMIT))
@@ -190,12 +184,12 @@ implementation
 		}
 		
 		newSkew = call Avt.getValue();
-       
+    	    	
         /* update logical clock parameters */
         atomic{
-        	clock  = msg->globalTime;
-        	lastUpdate = msg->localTime;
         	skew = newSkew;
+        	clock  = msg->globalTime;
+    		lastUpdate = msg->localTime;
         }
     }
     
@@ -219,8 +213,8 @@ implementation
             outgoingMsg->rootID = TOS_NODE_ID;
             ++(outgoingMsg->seqNum); // maybe set it to zero?
             /* init AVT */
-            call Avt.init(LOWER_BOUND,UPPER_BOUND,INITIAL_VALUE,MIN_DELTA,MAX_DELTA,INITIAL_DELTA);
-            atomic skew = 0.0f; 
+            //call Avt.init();
+            //atomic skew = 0.0f; 
             call TimeSyncMode.setMode(TS_TIMER_MODE); /* restart timer */ 
         }
 
@@ -378,7 +372,7 @@ implementation
             lastUpdate = 0;
         };
         
-        call Avt.init(LOWER_BOUND,UPPER_BOUND,INITIAL_VALUE,MIN_DELTA,MAX_DELTA,INITIAL_DELTA); 
+        call Avt.init(); 
 
         atomic outgoingMsg = (TimeSyncMsg*)call Send.getPayload(&outgoingMsgBuffer, sizeof(TimeSyncMsg));
         outgoingMsg->rootID = 0xFFFF;
@@ -410,7 +404,9 @@ implementation
         return SUCCESS;
     }
 
-    async command float     TimeSyncInfo.getSkew() { return skew; }
+    async command float  TimeSyncInfo.getSkew() { return skew; }
+    command float TimeSyncInfo.getDelta() { return call Avt.getDelta(); }
+    
     async command uint16_t  TimeSyncInfo.getRootID() { return outgoingMsg->rootID; }
     async command uint8_t   TimeSyncInfo.getSeqNum() { return outgoingMsg->seqNum; }
     async command uint8_t   TimeSyncInfo.getHeartBeats() { return heartBeats; }
