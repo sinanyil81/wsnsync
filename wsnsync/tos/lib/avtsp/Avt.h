@@ -53,7 +53,7 @@
 	/* ---------------------------------- */
 
     /* adaptive value tracking parameters */ 
-   	#define MIN_DELTA 0.000000001f
+   	#define MIN_DELTA 0.00000000001f
    	#define MAX_DELTA 0.00001f
     #define INITIAL_DELTA 0.00001f	
     #define UPPER_BOUND 0.0001f
